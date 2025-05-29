@@ -21,12 +21,12 @@ jobs:
       mysql:
         image: mysql:8
         env:
-          MYSQL_ROOT_PASSWORD: 1234567
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_DATABASE: neuralpix
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -p1234567"
+          --health-cmd="mysqladmin ping -h localhost -uroot -p${{ secrets.MYSQL_ROOT_PASSWORD }}"
           --health-interval=10s 
           --health-timeout=5s 
           --health-retries=5
