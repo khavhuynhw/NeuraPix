@@ -17,13 +17,13 @@ public class AuthController {
 
     private final AuthService authService;
 
-    public AuthController(AuthService authService1) {
+    public AuthController(AuthService authService) {
         this.authService = authService;
     }
 
     @PostMapping("/login")
     @Operation(summary = "Login user", description = "Authenticates user and returns JWT token")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponses> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
