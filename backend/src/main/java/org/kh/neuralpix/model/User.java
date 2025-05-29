@@ -38,6 +38,10 @@ public class User {
     @NotBlank(message = "Password is required")
     private String passwordHash;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false)
+    private UserRole role = UserRole.USER;
+
     @Column(name = "first_name", length = 100)
     private String firstName;
 
