@@ -13,12 +13,12 @@ jobs:
       mysql:
         image: mysql:8
         env:
-          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: dummy_password
           MYSQL_DATABASE: neuralpix
         ports:
           - 3306:3306
         options: >-
-          --health-cmd="mysqladmin ping -h localhost -uroot -p${{ secrets.DB_PASSWORD }}"
+          --health-cmd="mysqladmin ping -h localhost -uroot -pdummy_password"
           --health-interval=10s 
           --health-timeout=5s 
           --health-retries=5
@@ -36,7 +36,15 @@ jobs:
       - name: Build with Maven
         run: mvn clean package -Ptest
         working-directory: ./backend
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
 
       - name: Run Tests with Maven
         run: mvn test -Ptest
         working-directory: ./backend
+        env:
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
