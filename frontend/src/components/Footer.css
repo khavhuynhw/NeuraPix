@@ -1,0 +1,38 @@
+.footer-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer-link:hover {
+  color: #fff;
+  transform: translateX(4px);
+}
+
+.policy-link {
+  color: rgba(255, 255, 255, 0.9);
+  text-decoration: none;
+  transition: all 0.3s ease;
+  font-size: 14px;
+  margin-left: 16px;
+}
+
+.policy-link:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+.join-button {
+  background: #60a5fa !important;
+  height: 48px !important;
+  border: none !important;
+  transition: all 0.3s ease !important;
+}
+
+.join-button:hover {
+  background: #3b82f6 !important;
+  transform: translateY(-2px);
+} 
