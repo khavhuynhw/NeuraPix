@@ -1,0 +1,140 @@
+package org.kh.neuralpix.service.impl;
+
+import com.github.mustachejava.DefaultMustacheFactory;
+import com.github.mustachejava.Mustache;
+import com.github.mustachejava.MustacheFactory;
+import lombok.RequiredArgsConstructor;
+import org.kh.neuralpix.service.EmailService;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.stereotype.Service;
+import java.io.StringReader;
+import java.io.StringWriter;
+import java.time.Year;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class EmailServiceImpl implements EmailService {
+
+    private final JavaMailSender mailSender;
+    private final MustacheFactory mustacheFactory;
+    
+    @Value("${spring.mail.username}")
+    private String fromEmail;
+    
+    @Value("${app.frontend.url}")
+    private String frontendUrl;
+
+    public EmailServiceImpl(JavaMailSender mailSender) {
+        this.mailSender = mailSender;
+        this.mustacheFactory = new DefaultMustacheFactory();
+    }
+
+    @Override
+    public void sendPasswordResetEmail(String to, String username, String resetLink) {
+        try {
+            Mustache mustache = mustacheFactory.compile(new StringReader(getEmailTemplate()), "password-reset");
+            
+            Map<String, Object> context = new HashMap<>();
+            context.put("username", username);
+            context.put("resetLink", frontendUrl + "/reset-password?token=" + resetLink);
+            context.put("currentYear", Year.now().getValue());
+
+            StringWriter writer = new StringWriter();
+            mustache.execute(writer, context);
+            String emailContent = writer.toString();
+
+            var message = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, "UTF-8");
+            
+            helper.setFrom(fromEmail);
+            helper.setTo(to);
+            helper.setSubject("Reset Your NeuralPix Password");
+            helper.setText(emailContent, true);
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send password reset email", e);
+        }
+    }
+
+    private String getEmailTemplate() {
+        return """
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="UTF-8">
+                <title>Password Reset - NeuralPix</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        max-width: 600px;
+                        margin: 0 auto;
+                        padding: 20px;
+                    }
+                    .header {
+                        text-align: center;
+                        padding: 20px 0;
+                        background-color: #f8f9fa;
+                        border-radius: 5px;
+                    }
+                    .content {
+                        padding: 20px;
+                        background-color: #ffffff;
+                        border-radius: 5px;
+                        margin-top: 20px;
+                    }
+                    .button {
+                        display: inline-block;
+                        padding: 12px 24px;
+                        background-color: #007bff;
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 5px;
+                        margin: 20px 0;
+                    }
+                    .footer {
+                        text-align: center;
+                        margin-top: 20px;
+                        font-size: 12px;
+                        color: #666;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>Password Reset Request</h1>
+                </div>
+                
+                <div class="content">
+                    <p>Hello {{username}},</p>
+                    
+                    <p>We received a request to reset your password for your NeuralPix account. If you didn't make this request, you can safely ignore this email.</p>
+                    
+                    <p>To reset your password, click the button below:</p>
+                    
+                    <div style="text-align: center;">
+                        <a href="{{resetLink}}" class="button">Reset Password</a>
+                    </div>
+                    
+                    <p>Or copy and paste this link into your browser:</p>
+                    <p style="word-break: break-all;">{{resetLink}}</p>
+                    
+                    <p>This link will expire in 24 hours.</p>
+                    
+                    <p>If you have any questions, please contact our support team.</p>
+                </div>
+                
+                <div class="footer">
+                    <p>This is an automated message, please do not reply to this email.</p>
+                    <p>&copy; {{currentYear}} NeuralPix. All rights reserved.</p>
+                </div>
+            </body>
+            </html>
+            """;
+    }
+} 

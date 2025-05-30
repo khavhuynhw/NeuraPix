@@ -23,7 +23,7 @@ public class AuthController {
 
     @PostMapping("/login")
     @Operation(summary = "Login user", description = "Authenticates user and returns JWT token")
-    public ResponseEntity<LoginResponses> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
     }
 
@@ -38,6 +38,13 @@ public class AuthController {
     @Operation(summary = "Request password reset", description = "Initiates password reset process")
     public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password/confirm")
+    @Operation(summary = "Confirm password reset", description = "Resets password using the provided token")
+    public ResponseEntity<Void> resetPasswordConfirm(@Valid @RequestBody ResetPasswordConfirmRequest request) {
+        authService.resetPasswordConfirm(request);
         return ResponseEntity.ok().build();
     }
 
