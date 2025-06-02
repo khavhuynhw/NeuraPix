@@ -1,7 +1,12 @@
-import React from 'react';
-import { Form, Input, Button, Checkbox, Typography, Card } from 'antd';
-import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import styled from '@emotion/styled';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import React from "react";
+import { Form, Input, Button, Checkbox, Typography, Card, message } from "antd";
+import { UserOutlined, LockOutlined } from "@ant-design/icons";
+import styled from "@emotion/styled";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+
+
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -96,9 +101,38 @@ const Copyright = styled(Text)`
 
 const Login: React.FC = () => {
   const [form] = Form.useForm();
+  const navigate = useNavigate();
 
-  const onFinish = (values: any) => {
-    // handle login
+  const handleForgotPassword = () => {
+    navigate("/reset-password");
+  };
+
+  const handleRegister = () => {
+  navigate("/register");
+};
+
+  const onFinish = async (values: any) => {
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/auth/login",
+        {
+          username: values.username,
+          password: values.password,
+        }
+      );
+      const { token, user } = response.data;
+
+      localStorage.setItem("token", token);
+
+      message.success(`Welcome back, ${user.name || "User"}!`);
+
+    } catch (error: any) {
+      if (error.response && error.response.status === 401) {
+        message.error("Invalid email or password!");
+      } else {
+        message.error("Login failed. Please try again later.");
+      }
+    }
   };
 
   return (
@@ -125,15 +159,15 @@ const Login: React.FC = () => {
               requiredMark={false}
             >
               <Form.Item
-                name="email"
+                name="username"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' }
+                  { required: true, message: 'Please input your username!' },
+                  { message: 'Please enter a valid username!' }
                 ]}
               >
-                <Input 
-                  prefix={<UserOutlined />} 
-                  placeholder="Email address" 
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Username"
                   size="large"
                 />
               </Form.Item>
@@ -151,7 +185,9 @@ const Login: React.FC = () => {
                 <Form.Item name="remember" valuePropName="checked" noStyle>
                   <Checkbox>Remember me</Checkbox>
                 </Form.Item>
-                <a href="#" style={{ color: '#0079ff', fontWeight: 500 }}>Forgot Password?</a>
+                <a onClick={handleForgotPassword} style={{ color: '#0079ff', fontWeight: 500, cursor: 'pointer' }}>
+                  Forgot Password?
+                </a>
               </div>
               <Form.Item style={{ marginBottom: 8 }}>
                 <LoginButton type="primary" htmlType="submit" size="large">
@@ -163,7 +199,9 @@ const Login: React.FC = () => {
               </Text>
               <div style={{ textAlign: 'center', marginTop: 8 }}>
                 <Text>Don't have an Account? </Text>
-                <a href="#" style={{ color: '#0079ff', fontWeight: 500 }}>Register here</a>
+                <a onClick={handleRegister} style={{ color: '#0079ff', fontWeight: 500, cursor: 'pointer' }}>
+                  Register here
+                </a>
               </div>
             </Form>
           </StyledCard>
@@ -173,4 +211,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login; 
+export default Login;
