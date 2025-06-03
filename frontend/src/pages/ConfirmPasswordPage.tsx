@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
-import { Form, Input, Button, Typography, Card, message } from 'antd';
-import styled from '@emotion/styled';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from "react";
+import { Form, Input, Button, Typography, Card, message } from "antd";
+import styled from "@emotion/styled";
+import axios from "axios";
+import { useNavigate, useLocation } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -95,78 +95,115 @@ const Copyright = styled(Text)`
   font-size: 0.95rem;
 `;
 
-const ResetPasswordPage: React.FC = () => {
+const ConfirmPasswordPage: React.FC = () => {
   const [form] = Form.useForm();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [token, setToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    const queryParams = new URLSearchParams(location.search);
+    const t = queryParams.get("token");
+    if (!t) {
+      message.error("Token is missing in the URL.");
+    }
+    setToken(t);
+  }, [location.search]);
 
   const onFinish = async (values: any) => {
-  try {
-    const response = await axios.post('http://localhost:8080/auth/reset-password', {
-      email: values.email
-    });
+    if (!token) return;
 
-    if (response.status === 200) {
-      const resetLink = response.data.resetLink;
-      message.success('A password reset link has been sent to your email.');
+    if (values.password !== values.confirmPassword) {
+      message.error("Passwords do not match.");
+      return;
+    }
 
-      const url = new URL(resetLink);
-      const token = url.searchParams.get('token');
-      if (token) {
-        navigate(`/confirm-password?token=${token}`);
+    try {
+      await axios.post("http://localhost:8080/auth/confirm-reset-password", {
+        token: token, 
+        newPassword: values.password,
+        confirmPassword: values.confirmPassword,
+      });
+
+      message.success("Your password has been reset successfully!");
+      navigate("/login");
+    } catch (error: any) {
+      if (error.response?.data?.message) {
+        message.error(error.response.data.message);
+      } else {
+        message.error("Something went wrong. Please try again.");
       }
-      form.resetFields();
-    } else {
-      message.error('Failed to send reset email. Please try again later.');
     }
-  } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.message) {
-      message.error(error.response.data.message);
-    } else {
-      message.error('Something went wrong. Please try again.');
-    }
-  }
-};
+  };
 
   return (
     <MainWrapper>
       <CenteredContainer>
         <BrandingCol>
-          <Text type="secondary" style={{ fontSize: '1.1rem', letterSpacing: 1 }}>WELCOME TO</Text>
+          <Text
+            type="secondary"
+            style={{ fontSize: "1.1rem", letterSpacing: 1 }}
+          >
+            WELCOME TO
+          </Text>
           <Logo>
             NEURA<span className="dot">.</span>PIX
           </Logo>
-          <Paragraph style={{ fontSize: '1.08rem', color: '#222', marginBottom: '2.5rem', maxWidth: 400 }}>
-            NEURAPIX is an <b>AI-powered</b> photo editing platform that enhances images instantly. With advanced algorithms, it adjusts colors, removes noise, sharpens details, and restores old photos effortlessly. Perfect for both professionals and casual users—<b>no Photoshop skills needed!</b>
+          <Paragraph
+            style={{
+              fontSize: "1.08rem",
+              color: "#222",
+              marginBottom: "2.5rem",
+              maxWidth: 400,
+            }}
+          >
+            Reset your password to regain access and continue enhancing your
+            photos with our AI tools.
           </Paragraph>
           <Copyright>© 2025 NEURAPIX All rights reserved.</Copyright>
         </BrandingCol>
         <FormCol>
           <StyledCard>
-            <Title level={3} style={{ textAlign: 'center', marginBottom: 24, fontWeight: 700 }}>Reset Your Password</Title>
+            <Title
+              level={3}
+              style={{ textAlign: "center", marginBottom: 24, fontWeight: 700 }}
+            >
+              Set New Password
+            </Title>
             <Form
               form={form}
-              name="resetPassword"
+              name="confirmPassword"
               onFinish={onFinish}
               layout="vertical"
               requiredMark={false}
             >
               <Form.Item
-                name="email"
+                name="password"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' }
+                  {
+                    required: true,
+                    message: "Please input your new password!",
+                  },
                 ]}
               >
-                <Input placeholder="Email address" size="large" />
+                <Input.Password placeholder="New Password" size="large" />
+              </Form.Item>
+              <Form.Item
+                name="confirmPassword"
+                rules={[
+                  {
+                    required: true,
+                    message: "Please confirm your new password!",
+                  },
+                ]}
+              >
+                <Input.Password placeholder="Confirm Password" size="large" />
               </Form.Item>
               <Form.Item style={{ marginBottom: 16 }}>
                 <ResetButton type="primary" htmlType="submit" size="large">
-                  Reset
+                  Confirm
                 </ResetButton>
               </Form.Item>
-              <Text type="secondary" style={{ display: 'block', textAlign: 'center', fontSize: '0.95rem' }}>
-                By continuing, you agree to our <a href="#" style={{ color: '#0079ff' }}>Terms of Use</a> and <a href="#" style={{ color: '#0079ff' }}>Privacy Policy</a>
-              </Text>
             </Form>
           </StyledCard>
         </FormCol>
@@ -175,4 +212,4 @@ const ResetPasswordPage: React.FC = () => {
   );
 };
 
-export default ResetPasswordPage;
+export default ConfirmPasswordPage;

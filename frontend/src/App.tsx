@@ -8,6 +8,7 @@ import Header from './components/Header'
 import Footer from './components/Footer'
 import 'antd/dist/reset.css'
 import HomePage from './pages/HomePage'
+import ConfirmPasswordPage from './pages/ConfirmPasswordPage'
 
 const { Content } = Layout
 
@@ -28,6 +29,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/confirm-password" element={<ConfirmPasswordPage />} />
           </Routes>
         </Content>
         <Footer />

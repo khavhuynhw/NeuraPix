@@ -36,9 +36,16 @@ public class AuthController {
 
     @PostMapping("/reset-password")
     @Operation(summary = "Request password reset", description = "Initiates password reset process")
-    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<ResetPasswordResponse> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        ResetPasswordResponse response = authService.resetPassword(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/confirm-reset-password")
+    @Operation(summary = "Request password reset", description = "Initiates password reset process")
+    public ResponseEntity<?> confirmReset(@Valid @RequestBody ConfirmResetPasswordRequest request) {
+        authService.confirmResetPassword(request);
+        return ResponseEntity.ok("Password has been reset successfully");
     }
 
     @PostMapping("/change-password")
