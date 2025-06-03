@@ -41,6 +41,13 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @PostMapping("/reset-password/confirm")
+    @Operation(summary = "Confirm password reset", description = "Resets password using the provided token")
+    public ResponseEntity<Void> resetPasswordConfirm(@Valid @RequestBody ResetPasswordConfirmRequest request) {
+        authService.resetPasswordConfirm(request);
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/change-password")
     @Operation(summary = "Change password", description = "Changes user's password")
     public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
