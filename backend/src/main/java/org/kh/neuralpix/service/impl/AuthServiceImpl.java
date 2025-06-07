@@ -12,8 +12,10 @@ import org.kh.neuralpix.security.JwtTokenProvider;
 import org.kh.neuralpix.service.AuthService;
 import org.kh.neuralpix.service.EmailService;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -52,19 +54,29 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public LoginResponse login(LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-            new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+        try {
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+            );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        String token = jwtTokenProvider.generateToken(userDetails);
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtTokenProvider.generateToken(userDetails);
 
-        User user = userRepository.findByUsername(request.getUsername())
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return new LoginResponse(token, user.getUsername(), user.getRole().name());
+            return new LoginResponse(token, user.getEmail(), user.getRole().name());
+
+        } catch (BadCredentialsException ex) {
+            throw new RuntimeException("Invalid email or password");
+        } catch (AuthenticationException ex) {
+            throw new RuntimeException("Authentication failed: " + ex.getMessage());
+        } catch (Exception ex) {
+            throw new RuntimeException("Login failed due to server error");
+        }
     }
+
 
     @Override
     @Transactional

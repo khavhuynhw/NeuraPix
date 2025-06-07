@@ -12,7 +12,7 @@ import { BillingPage } from "./pages/BillingPage";
 import { GeneratorPage } from "./pages/GeneratorPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
-
+import { AuthProvider } from "./context/AuthContext";
 const { Content } = Layout;
 
 const App = () => (
@@ -27,7 +27,8 @@ const App = () => (
   >
     <AntdApp>
       <BrowserRouter>
-        <Layout
+       <AuthProvider>
+         <Layout
           style={{
             minHeight: "100vh",
             width: "100vw",
@@ -46,7 +47,7 @@ const App = () => (
             }}
           >
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/dashboard" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
@@ -60,6 +61,7 @@ const App = () => (
           </Content>
           <Footer />
         </Layout>
+        </AuthProvider>
       </BrowserRouter>
     </AntdApp>
   </ConfigProvider>

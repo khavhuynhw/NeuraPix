@@ -8,16 +8,31 @@ import {
   Col,
   Space,
 } from "antd";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // Add this import
 
 const { Title, Paragraph, Text } = Typography;
 
 export const LoginPage = () => {
   const [form] = Form.useForm();
+  const { login } = useAuth(); // Get login from context
+  const navigate = useNavigate(); // For redirect after login
 
-  const onFinish = (values: any) => {
-    console.log("Login values:", values);
-    // Handle login logic here
+  const onFinish = async (values: any) => {
+    try {
+      await login({
+        email: values.email,
+        password: values.password,
+      });
+      navigate("/dashboard"); // Redirect on success
+    } catch (error: any) {
+      form.setFields([
+        {
+          name: "email",
+          errors: [error.message || "Login failed"],
+        },
+      ]);
+    }
   };
 
   return (

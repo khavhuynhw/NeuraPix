@@ -87,7 +87,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         >
           <div style={{ display: "flex", alignItems: "center" }}>
             <Link
-              to="/"
+              to="/dashboard"
               style={{
                 display: "flex",
                 alignItems: "center",
