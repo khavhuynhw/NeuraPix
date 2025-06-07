@@ -1,18 +1,14 @@
 import axios from "axios";
+import type { LoginPayload, LoginResponse } from "../types/auth";
+
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token?: string;
-  message?: string;
-  [key: string]: any;
-}
-
+/**
+ * Authenticates a user and returns a JWT token.
+ * @param {LoginPayload} payload - The login credentials.
+ * @returns {Promise<LoginResponse>} - The response containing the JWT token or error message.
+ */
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const response = await axios.post(
