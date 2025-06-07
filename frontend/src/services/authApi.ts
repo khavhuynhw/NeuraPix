@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { LoginPayload, LoginResponse } from "../types/auth";
+import type { LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -12,7 +12,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const response = await axios.post(
-      `${BASE_URL}auth/login`,
+      `${BASE_URL}/auth/login`,
       payload,
       {
         headers: {
@@ -32,5 +32,25 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
       throw new Error(error.response.data.message || "Login failed");
     }
     throw new Error("Login failed");
+  }
+}
+
+/**
+ * Registers a new user.
+ * @param {RegisterPayload} payload - The registration data.
+ */
+export async function register(payload: RegisterPayload): Promise<void> {
+  try {
+    await axios.post(`${BASE_URL}/auth/register`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || "Registration failed");
+    }
+    throw new Error("Registration failed");
   }
 }

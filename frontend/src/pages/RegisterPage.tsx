@@ -8,16 +8,34 @@ import {
   Col,
   Space,
 } from "antd";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 
 const { Title, Paragraph, Text } = Typography;
 
 export const RegisterPage = () => {
   const [form] = Form.useForm();
+  const { register } = useAuth();
+  const navigate = useNavigate();
 
-  const onFinish = (values: any) => {
-    console.log("Register values:", values);
-    // Handle registration logic here
+  const onFinish = async (values: any) => {
+    try {
+      await register({
+        username: values.username,
+        email: values.email,
+        password: values.password,
+        firstName: values.firstName,
+        lastName: values.lastName,
+      });
+      navigate("/login");
+    } catch (error: any) {
+      form.setFields([
+        {
+          name: "agree",
+          errors: [error.message || "Registration failed"],
+        },
+      ]);
+    }
   };
 
   return (
@@ -247,6 +265,41 @@ export const RegisterPage = () => {
                 </Row>
 
                 <Form.Item
+                  name="username"
+                  rules={[
+                    { required: true, message: "Please input your username!" },
+                    {
+                      min: 3,
+                      max: 50,
+                      message: "Username must be between 3 and 50 characters",
+                    },
+                  ]}
+                  style={{ marginBottom: 16 }}
+                >
+                  <Input
+                    placeholder="Username"
+                    style={{
+                      height: 44,
+                      borderRadius: 6,
+                      border: "1px solid #d1d5db",
+                      fontSize: 14,
+                      transition: "all 0.3s ease",
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = "#0079FF";
+                      e.target.style.boxShadow =
+                        "0 0 0 2px rgba(0, 121, 255, 0.1)";
+                      e.target.style.transform = "translateY(-1px)";
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = "#d1d5db";
+                      e.target.style.boxShadow = "none";
+                      e.target.style.transform = "translateY(0)";
+                    }}
+                  />
+                </Form.Item>
+
+                <Form.Item
                   name="email"
                   rules={[
                     { required: true, message: "Please input your email!" },
@@ -325,7 +378,7 @@ export const RegisterPage = () => {
                           return Promise.resolve();
                         }
                         return Promise.reject(
-                          new Error("Passwords do not match!"),
+                          new Error("Passwords do not match!")
                         );
                       },
                     }),
@@ -364,7 +417,7 @@ export const RegisterPage = () => {
                         value
                           ? Promise.resolve()
                           : Promise.reject(
-                              new Error("Please accept the terms!"),
+                              new Error("Please accept the terms!")
                             ),
                     },
                   ]}
