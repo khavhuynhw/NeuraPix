@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { login as loginApi } from "../services/authApi";
-import type { LoginPayload, LoginResponse } from "../types/auth";
+import { login as loginApi, register as registerApi } from "../services/authApi";
+import type { LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
 
 interface AuthContextType {
   user: any;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => void;
+  register: (payload: RegisterPayload) => Promise<void>;
   accessToken: string | null;
   refreshToken: string | null;
 }
@@ -54,6 +55,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("refreshToken");
   };
 
+  const register = async (payload: RegisterPayload) => {
+    await registerApi(payload);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -61,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         isAuthenticated: !!accessToken,
         login,
         logout,
+        register,
         accessToken,
         refreshToken,
       }}

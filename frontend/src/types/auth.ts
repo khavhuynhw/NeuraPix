@@ -8,3 +8,11 @@ export interface LoginResponse {
   message?: string;
   [key: string]: any;
 }
+
+export interface RegisterPayload {
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+}
