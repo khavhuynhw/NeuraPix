@@ -12,12 +12,12 @@ import { Link } from "react-router-dom";
 
 const { Title, Paragraph, Text } = Typography;
 
-export const RegisterPage = () => {
+export const LoginPage = () => {
   const [form] = Form.useForm();
 
   const onFinish = (values: any) => {
-    console.log("Register values:", values);
-    // Handle registration logic here
+    console.log("Login values:", values);
+    // Handle login logic here
   };
 
   return (
@@ -39,10 +39,10 @@ export const RegisterPage = () => {
           borderRadius: 16,
           boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
           overflow: "hidden",
-          minHeight: 600,
+          minHeight: 500,
         }}
       >
-        <Row style={{ minHeight: 600 }}>
+        <Row style={{ minHeight: 500 }}>
           {/* Left Side - Welcome Section */}
           <Col
             xs={24}
@@ -69,7 +69,7 @@ export const RegisterPage = () => {
                     letterSpacing: "1px",
                   }}
                 >
-                  JOIN THE FUTURE OF
+                  WELCOME TO
                 </Title>
                 <Title
                   level={1}
@@ -94,12 +94,13 @@ export const RegisterPage = () => {
                     margin: "24px 0 24px 0",
                   }}
                 >
-                  Create your account and unlock the power of{" "}
+                  NEURAPIX is an{" "}
                   <Text strong style={{ color: "#0079FF" }}>
                     AI-powered
                   </Text>{" "}
-                  image generation. Join thousands of creators who are already
-                  transforming their ideas into stunning visuals.
+                  photo editing platform that enhances images instantly. With
+                  advanced algorithms, it adjusts colors, removes noise,
+                  sharpens details, and optimizes lighting automatically.
                 </Paragraph>
                 <Paragraph
                   style={{
@@ -108,39 +109,11 @@ export const RegisterPage = () => {
                     lineHeight: 1.6,
                   }}
                 >
-                  Start your creative journey today with professional-grade
-                  tools and unlimited possibilities.
+                  Perfect for both professionals and casual users—
+                  <Text strong style={{ color: "#0079FF" }}>
+                    no Photoshop skills needed!
+                  </Text>
                 </Paragraph>
-              </div>
-
-              <div
-                style={{
-                  background: "rgba(0, 121, 255, 0.05)",
-                  borderRadius: 12,
-                  padding: 20,
-                  border: "1px solid rgba(0, 121, 255, 0.1)",
-                }}
-              >
-                <Title
-                  level={5}
-                  style={{ color: "#0079FF", margin: 0, marginBottom: 12 }}
-                >
-                  ✨ What you'll get:
-                </Title>
-                <Space direction="vertical" size="small">
-                  <Text style={{ color: "#4b5563" }}>
-                    • Free trial with 10 image generations
-                  </Text>
-                  <Text style={{ color: "#4b5563" }}>
-                    • Access to all AI art styles
-                  </Text>
-                  <Text style={{ color: "#4b5563" }}>
-                    • High-resolution downloads
-                  </Text>
-                  <Text style={{ color: "#4b5563" }}>
-                    • Priority customer support
-                  </Text>
-                </Space>
               </div>
 
               <Text style={{ color: "#9ca3af", fontSize: 14 }}>
@@ -149,7 +122,7 @@ export const RegisterPage = () => {
             </Space>
           </Col>
 
-          {/* Right Side - Register Form */}
+          {/* Right Side - Login Form */}
           <Col
             xs={24}
             lg={10}
@@ -161,7 +134,7 @@ export const RegisterPage = () => {
             }}
           >
             <Space direction="vertical" size="large" style={{ width: "100%" }}>
-              <div style={{ textAlign: "center", marginBottom: 24 }}>
+              <div style={{ textAlign: "center", marginBottom: 32 }}>
                 <Title
                   level={2}
                   style={{
@@ -171,11 +144,8 @@ export const RegisterPage = () => {
                     margin: 0,
                   }}
                 >
-                  Create Your Account
+                  Log In To Your Account
                 </Title>
-                <Text type="secondary" style={{ fontSize: 16 }}>
-                  Join NEURAPIX and start creating amazing art with AI
-                </Text>
               </div>
 
               <Form
@@ -185,82 +155,21 @@ export const RegisterPage = () => {
                 size="large"
                 style={{ width: "100%" }}
               >
-                <Row gutter={12}>
-                  <Col xs={24} sm={12}>
-                    <Form.Item
-                      name="firstName"
-                      rules={[{ required: true, message: "Required" }]}
-                      style={{ marginBottom: 16 }}
-                    >
-                      <Input
-                        placeholder="First Name"
-                        style={{
-                          height: 44,
-                          borderRadius: 6,
-                          border: "1px solid #d1d5db",
-                          fontSize: 14,
-                          transition: "all 0.3s ease",
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = "#0079FF";
-                          e.target.style.boxShadow =
-                            "0 0 0 2px rgba(0, 121, 255, 0.1)";
-                          e.target.style.transform = "translateY(-1px)";
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = "#d1d5db";
-                          e.target.style.boxShadow = "none";
-                          e.target.style.transform = "translateY(0)";
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                  <Col xs={24} sm={12}>
-                    <Form.Item
-                      name="lastName"
-                      rules={[{ required: true, message: "Required" }]}
-                      style={{ marginBottom: 16 }}
-                    >
-                      <Input
-                        placeholder="Last Name"
-                        style={{
-                          height: 44,
-                          borderRadius: 6,
-                          border: "1px solid #d1d5db",
-                          fontSize: 14,
-                          transition: "all 0.3s ease",
-                        }}
-                        onFocus={(e) => {
-                          e.target.style.borderColor = "#0079FF";
-                          e.target.style.boxShadow =
-                            "0 0 0 2px rgba(0, 121, 255, 0.1)";
-                          e.target.style.transform = "translateY(-1px)";
-                        }}
-                        onBlur={(e) => {
-                          e.target.style.borderColor = "#d1d5db";
-                          e.target.style.boxShadow = "none";
-                          e.target.style.transform = "translateY(0)";
-                        }}
-                      />
-                    </Form.Item>
-                  </Col>
-                </Row>
-
                 <Form.Item
                   name="email"
                   rules={[
                     { required: true, message: "Please input your email!" },
                     { type: "email", message: "Please enter a valid email!" },
                   ]}
-                  style={{ marginBottom: 16 }}
+                  style={{ marginBottom: 20 }}
                 >
                   <Input
                     placeholder="Email address"
                     style={{
-                      height: 44,
+                      height: 48,
                       borderRadius: 6,
                       border: "1px solid #d1d5db",
-                      fontSize: 14,
+                      fontSize: 16,
                       transition: "all 0.3s ease",
                     }}
                     onFocus={(e) => {
@@ -281,64 +190,16 @@ export const RegisterPage = () => {
                   name="password"
                   rules={[
                     { required: true, message: "Please input your password!" },
-                    {
-                      min: 8,
-                      message: "Password must be at least 8 characters!",
-                    },
-                  ]}
-                  style={{ marginBottom: 16 }}
-                >
-                  <Input.Password
-                    placeholder="Password (min. 8 characters)"
-                    style={{
-                      height: 44,
-                      borderRadius: 6,
-                      border: "1px solid #d1d5db",
-                      fontSize: 14,
-                      transition: "all 0.3s ease",
-                    }}
-                    onFocus={(e) => {
-                      e.target.style.borderColor = "#0079FF";
-                      e.target.style.boxShadow =
-                        "0 0 0 2px rgba(0, 121, 255, 0.1)";
-                      e.target.style.transform = "translateY(-1px)";
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = "#d1d5db";
-                      e.target.style.boxShadow = "none";
-                      e.target.style.transform = "translateY(0)";
-                    }}
-                  />
-                </Form.Item>
-
-                <Form.Item
-                  name="confirmPassword"
-                  dependencies={["password"]}
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please confirm your password!",
-                    },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue("password") === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(
-                          new Error("Passwords do not match!"),
-                        );
-                      },
-                    }),
                   ]}
                   style={{ marginBottom: 20 }}
                 >
                   <Input.Password
-                    placeholder="Confirm Password"
+                    placeholder="Password"
                     style={{
-                      height: 44,
+                      height: 48,
                       borderRadius: 6,
                       border: "1px solid #d1d5db",
-                      fontSize: 14,
+                      fontSize: 16,
                       transition: "all 0.3s ease",
                     }}
                     onFocus={(e) => {
@@ -355,23 +216,43 @@ export const RegisterPage = () => {
                   />
                 </Form.Item>
 
-                <Form.Item
-                  name="agree"
-                  valuePropName="checked"
-                  rules={[
-                    {
-                      validator: (_, value) =>
-                        value
-                          ? Promise.resolve()
-                          : Promise.reject(
-                              new Error("Please accept the terms!"),
-                            ),
-                    },
-                  ]}
+                <Row
+                  justify="space-between"
+                  align="middle"
                   style={{ marginBottom: 24 }}
                 >
-                  <Checkbox style={{ color: "#64748b", fontSize: 14 }}>
-                    I agree to the{" "}
+                  <Form.Item
+                    name="remember"
+                    valuePropName="checked"
+                    style={{ margin: 0 }}
+                  >
+                    <Checkbox style={{ color: "#64748b" }}>
+                      Remember me
+                    </Checkbox>
+                  </Form.Item>
+                  <Link
+                    to="/forgot-password"
+                    style={{
+                      color: "#0079FF",
+                      fontSize: 14,
+                      transition: "all 0.3s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = "#3399FF";
+                      e.currentTarget.style.textDecoration = "underline";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = "#0079FF";
+                      e.currentTarget.style.textDecoration = "none";
+                    }}
+                  >
+                    Forgot Password
+                  </Link>
+                </Row>
+
+                <div style={{ marginBottom: 20 }}>
+                  <Text style={{ color: "#64748b", fontSize: 14 }}>
+                    By continuing, you agree to our{" "}
                     <Link
                       to="/terms"
                       style={{
@@ -385,7 +266,7 @@ export const RegisterPage = () => {
                         (e.currentTarget.style.color = "#0079FF")
                       }
                     >
-                      Terms of Service
+                      Terms of Use
                     </Link>{" "}
                     and{" "}
                     <Link
@@ -403,8 +284,9 @@ export const RegisterPage = () => {
                     >
                       Privacy Policy
                     </Link>
-                  </Checkbox>
-                </Form.Item>
+                    .
+                  </Text>
+                </div>
 
                 <Form.Item style={{ margin: 0 }}>
                   <Button
@@ -412,7 +294,7 @@ export const RegisterPage = () => {
                     htmlType="submit"
                     block
                     style={{
-                      height: 44,
+                      height: 48,
                       borderRadius: 6,
                       fontSize: 16,
                       fontWeight: 600,
@@ -445,16 +327,16 @@ export const RegisterPage = () => {
                         "scale(1.02) translateY(-2px)";
                     }}
                   >
-                    Create Account
+                    Login
                   </Button>
                 </Form.Item>
               </Form>
 
               <div style={{ textAlign: "center" }}>
-                <Text style={{ color: "#64748b", fontSize: 14 }}>
-                  Already have an account?{" "}
+                <Text style={{ color: "#64748b", fontSize: 16 }}>
+                  Don't have an Account ?{" "}
                   <Link
-                    to="/login"
+                    to="/register"
                     style={{
                       color: "#0079FF",
                       fontWeight: 600,
@@ -470,7 +352,7 @@ export const RegisterPage = () => {
                       e.currentTarget.style.transform = "translateY(0)";
                     }}
                   >
-                    Sign in here
+                    Register here
                   </Link>
                 </Text>
               </div>

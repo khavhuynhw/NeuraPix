@@ -1,39 +1,68 @@
-import React from 'react'
-import { Layout } from 'antd'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
-import Login from './pages/Login'
-import ResetPasswordPage from './pages/ResetPasswordPage'
-import RegisterPage from './pages/RegisterPage';
-import Header from './components/Header'
-import Footer from './components/Footer'
-import 'antd/dist/reset.css'
-import HomePage from './pages/HomePage'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ConfigProvider, App as AntdApp, Layout } from "antd";
+import { Header } from "./components/Header";
+import { Footer } from "./components/Footer";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+import { LoginPage } from "./pages/LoginPage";
+import { RegisterPage } from "./pages/RegisterPage";
+import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
+import { UserProfilePage } from "./pages/UserProfilePage";
+import { BillingPage } from "./pages/BillingPage";
+import { GeneratorPage } from "./pages/GeneratorPage";
+import FeaturesPage from "./pages/FeaturesPage";
+import PricingPage from "./pages/PricingPage";
 
-const { Content } = Layout
+const { Content } = Layout;
 
-function App() {
-  return (
-    <Router>
-      <Layout style={{ minHeight: '100vh' }}>
-        <Header />
-        <Content
+const App = () => (
+  <ConfigProvider
+    theme={{
+      token: {
+        colorPrimary: "#0079FF",
+        colorPrimaryHover: "#3399FF",
+        colorPrimaryActive: "#0056B3",
+      },
+    }}
+  >
+    <AntdApp>
+      <BrowserRouter>
+        <Layout
           style={{
-            paddingTop: '64px',
-            minHeight: 'calc(100vh - 64px)',
-            background: '#f5f5f5',
+            minHeight: "100vh",
+            width: "100vw",
+            margin: 0,
+            padding: 0,
+            overflowX: "hidden",
           }}
         >
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-          </Routes>
-        </Content>
-        <Footer />
-      </Layout>
-    </Router>
-  )
-}
+          <Header />
+          <Content
+            style={{
+              marginTop: 64,
+              width: "100%",
+              padding: 0,
+              margin: 0,
+            }}
+          >
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/profile" element={<UserProfilePage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/generator" element={<GeneratorPage />} />
+              <Route path="/features" element={<FeaturesPage />} />
+              <Route path="/pricing" element={<PricingPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </Content>
+          <Footer />
+        </Layout>
+      </BrowserRouter>
+    </AntdApp>
+  </ConfigProvider>
+);
 
-export default App
+export default App;
