@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { login as loginApi } from "../services/authApi";
-import type { LoginPayload, LoginResponse } from "../services/authApi";
+import type { LoginPayload, LoginResponse } from "../types/auth";
 
 interface AuthContextType {
   user: any;
