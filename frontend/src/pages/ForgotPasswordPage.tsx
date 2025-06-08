@@ -2,15 +2,27 @@ import { Form, Input, Button, Typography, Row, Col, Space } from "antd";
 import { MailOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Sparkle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
 const { Title, Paragraph, Text } = Typography;
 
 export const ForgotPasswordPage = () => {
   const [form] = Form.useForm();
+  const { resetPw } = useAuth();
 
-  const onFinish = (values: any) => {
-    console.log("Reset password values:", values);
-    // Handle password reset logic here
+  const onFinish = async (values: any) => {
+    try {
+      await resetPw({
+        email: values.email,
+      });
+    } catch (error: any) {
+      form.setFields([
+        {
+          name: "email",
+          errors: [error.message || "Reset password failed"],
+        },
+      ]);
+    }
   };
 
   return (

@@ -1,169 +1,246 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import React from 'react';
-import { Form, Input, Button, Typography, Card, message } from 'antd';
-import styled from '@emotion/styled';
-import axios from 'axios';
+import { Form, Input, Button, Typography, Row, Col, Space, message } from "antd";
+import { LockOutlined, ArrowLeftOutlined } from "@ant-design/icons";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
+import { Sparkle } from "lucide-react";
+import { useAuth } from "../context/AuthContext";
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
-const MainWrapper = styled.div`
-  min-height: calc(100vh - 72px - 260px);
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 0 32px 0;
-`;
-
-const CenteredContainer = styled.div`
-  width: 100%;
-  max-width: 1100px;
-  display: flex;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  @media (max-width: 900px) {
-    flex-direction: column;
-    max-width: 95vw;
-    box-shadow: none;
-    border-radius: 0;
-  }
-`;
-
-const BrandingCol = styled.div`
-  flex: 1.1;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 56px 48px 40px 48px;
-  @media (max-width: 900px) {
-    padding: 32px 24px 16px 24px;
-    align-items: center;
-    text-align: center;
-  }
-`;
-
-const FormCol = styled.div`
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #fff;
-  padding: 56px 48px;
-  @media (max-width: 900px) {
-    padding: 32px 16px;
-  }
-`;
-
-const Logo = styled.div`
-  font-size: 2.8rem;
-  font-weight: 700;
-  color: #222;
-  margin: 0.5rem 0 1.5rem 0;
-  letter-spacing: 2px;
-  .dot {
-    color: #0079ff;
-  }
-`;
-
-const StyledCard = styled(Card)`
-  width: 100%;
-  max-width: 370px;
-  border-radius: 8px !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: none;
-`;
-
-const ResetButton = styled(Button)`
-  width: 100%;
-  height: 40px;
-  background-color: #0079ff;
-  border-color: #0079ff;
-  font-weight: 600;
-  &:hover {
-    background-color: #0056b3 !important;
-    border-color: #0056b3 !important;
-  }
-`;
-
-const Copyright = styled(Text)`
-  margin-top: 2.5rem;
-  color: #888;
-  font-size: 0.95rem;
-`;
-
-const ResetPasswordPage: React.FC = () => {
+export const ResetPasswordPage = () => {
   const [form] = Form.useForm();
+  const { confirmResetPw } = useAuth(); // HÀM GỌI API confirm reset password
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token");
+  const navigate = useNavigate();
 
   const onFinish = async (values: any) => {
-  try {
-    const response = await axios.post('http://localhost:8080/auth/reset-password', {
-      email: values.email
-    });
-
-    if (response.status === 200) {
-      message.success('A password reset link has been sent to your email.');
-      form.resetFields();
-    } else {
-      message.error('Failed to send reset email. Please try again later.');
+    if (!token) {
+      message.error("Reset token is missing or invalid.");
+      return;
     }
-  } catch (error: any) {
-    if (error.response && error.response.data && error.response.data.message) {
-      message.error(error.response.data.message);
-    } else {
-      message.error('Something went wrong. Please try again.');
+    try {
+      await confirmResetPw({
+        token,
+        newPassword: values.newPassword,
+      });
+      message.success("Your password has been reset successfully!");
+      navigate("/login");
+    } catch (error: any) {
+      form.setFields([
+        {
+          name: "newPassword",
+          errors: [error.message || "Reset password failed"],
+        },
+      ]);
     }
-  }
-};
+  };
 
   return (
-    <MainWrapper>
-      <CenteredContainer>
-        <BrandingCol>
-          <Text type="secondary" style={{ fontSize: '1.1rem', letterSpacing: 1 }}>WELCOME TO</Text>
-          <Logo>
-            NEURA<span className="dot">.</span>PIX
-          </Logo>
-          <Paragraph style={{ fontSize: '1.08rem', color: '#222', marginBottom: '2.5rem', maxWidth: 400 }}>
-            NEURAPIX is an <b>AI-powered</b> photo editing platform that enhances images instantly. With advanced algorithms, it adjusts colors, removes noise, sharpens details, and restores old photos effortlessly. Perfect for both professionals and casual users—<b>no Photoshop skills needed!</b>
-          </Paragraph>
-          <Copyright>© 2025 NEURAPIX All rights reserved.</Copyright>
-        </BrandingCol>
-        <FormCol>
-          <StyledCard>
-            <Title level={3} style={{ textAlign: 'center', marginBottom: 24, fontWeight: 700 }}>Reset Your Password</Title>
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "20px",
+      }}
+    >
+      <Row
+        style={{
+          width: "100%",
+          maxWidth: 900,
+          minHeight: "500px",
+          backgroundColor: "white",
+          borderRadius: 24,
+          boxShadow: "0 20px 60px rgba(0, 121, 255, 0.1)",
+          overflow: "hidden",
+        }}
+      >
+        {/* Left Side */}
+        <Col
+          xs={24}
+          lg={12}
+          style={{
+            background: "linear-gradient(135deg, #0079FF 0%, #0056B3 50%, #003D80 100%)",
+            color: "white",
+            padding: "60px 40px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <div>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  marginBottom: 24,
+                }}
+              >
+                <div
+                  style={{
+                    height: 40,
+                    width: 40,
+                    background: "linear-gradient(135deg, #00C7FF, #0079FF)",
+                    borderRadius: 10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 12px rgba(0, 199, 255, 0.4)",
+                  }}
+                >
+                  <Sparkle style={{ color: "#fff", fontSize: 24 }} />
+                </div>
+                <Title
+                  level={1}
+                  style={{
+                    color: "white",
+                    fontSize: 40,
+                    fontWeight: 700,
+                    margin: 0,
+                    letterSpacing: "2px",
+                  }}
+                >
+                  NEURAPIX
+                </Title>
+              </div>
+            </div>
+
+            <div style={{ maxWidth: 350 }}>
+              <Title level={3} style={{ color: "white", marginBottom: 16 }}>
+                Set a New Password
+              </Title>
+              <Paragraph style={{ color: "rgba(255,255,255,0.9)", fontSize: 16 }}>
+                Choose a strong password to keep your account secure.
+              </Paragraph>
+            </div>
+          </Space>
+        </Col>
+
+        {/* Right Side */}
+        <Col
+          xs={24}
+          lg={12}
+          style={{
+            padding: "60px 40px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+          }}
+        >
+          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+            <div>
+              <Link
+                to="/login"
+                style={{
+                  color: "#0079FF",
+                  fontSize: 14,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginBottom: 24,
+                }}
+              >
+                <ArrowLeftOutlined /> Back to Login
+              </Link>
+
+              <Title
+                level={2}
+                style={{
+                  color: "#1f2937",
+                  fontSize: 28,
+                  fontWeight: 700,
+                  margin: 0,
+                  marginBottom: 8,
+                }}
+              >
+                Create New Password
+              </Title>
+              <Text type="secondary" style={{ fontSize: 16 }}>
+                Enter your new password below
+              </Text>
+            </div>
+
             <Form
               form={form}
-              name="resetPassword"
-              onFinish={onFinish}
               layout="vertical"
-              requiredMark={false}
+              onFinish={onFinish}
+              size="large"
+              style={{ width: "100%" }}
             >
               <Form.Item
-                name="email"
+                name="newPassword"
                 rules={[
-                  { required: true, message: 'Please input your email!' },
-                  { type: 'email', message: 'Please enter a valid email!' }
+                  { required: true, message: "Please enter your new password!" },
+                  { min: 6, message: "Password must be at least 6 characters." },
                 ]}
               >
-                <Input placeholder="Email address" size="large" />
+                <Input.Password
+                  prefix={<LockOutlined style={{ color: "#0079FF" }} />}
+                  placeholder="New Password"
+                  style={{
+                    height: 48,
+                    borderRadius: 8,
+                    fontSize: 16,
+                  }}
+                />
               </Form.Item>
-              <Form.Item style={{ marginBottom: 16 }}>
-                <ResetButton type="primary" htmlType="submit" size="large">
-                  Reset
-                </ResetButton>
+
+              <Form.Item
+                name="confirmPassword"
+                dependencies={["newPassword"]}
+                rules={[
+                  { required: true, message: "Please confirm your password!" },
+                  ({ getFieldValue }) => ({
+                    validator(_, value) {
+                      if (!value || getFieldValue("newPassword") === value) {
+                        return Promise.resolve();
+                      }
+                      return Promise.reject(
+                        new Error("Passwords do not match!")
+                      );
+                    },
+                  }),
+                ]}
+              >
+                <Input.Password
+                  prefix={<LockOutlined style={{ color: "#0079FF" }} />}
+                  placeholder="Confirm Password"
+                  style={{
+                    height: 48,
+                    borderRadius: 8,
+                    fontSize: 16,
+                  }}
+                />
               </Form.Item>
-              <Text type="secondary" style={{ display: 'block', textAlign: 'center', fontSize: '0.95rem' }}>
-                By continuing, you agree to our <a href="#" style={{ color: '#0079ff' }}>Terms of Use</a> and <a href="#" style={{ color: '#0079ff' }}>Privacy Policy</a>
-              </Text>
+
+              <Form.Item style={{ margin: 0 }}>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  style={{
+                    height: 48,
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 600,
+                    background:
+                      "linear-gradient(135deg, #0079FF 0%, #0056B3 100%)",
+                    border: "none",
+                    boxShadow: "0 4px 12px rgba(0, 121, 255, 0.3)",
+                    marginBottom: 16,
+                  }}
+                >
+                  Reset Password
+                </Button>
+              </Form.Item>
             </Form>
-          </StyledCard>
-        </FormCol>
-      </CenteredContainer>
-    </MainWrapper>
+          </Space>
+        </Col>
+      </Row>
+    </div>
   );
 };
-
-export default ResetPasswordPage;

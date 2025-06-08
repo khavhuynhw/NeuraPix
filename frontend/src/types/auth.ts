@@ -16,3 +16,12 @@ export interface RegisterPayload {
   firstName?: string;
   lastName?: string;
 }
+
+export interface ForgotPwPayload {
+  email: string;
+}
+
+export interface ConfirmResetPasswordPayload {
+  token: string;
+  newPassword: string;
+}
