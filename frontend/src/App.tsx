@@ -13,6 +13,7 @@ import { GeneratorPage } from "./pages/GeneratorPage";
 import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
 import { AuthProvider } from "./context/AuthContext";
+import { ResetPasswordPage } from "./pages/ResetPasswordPage";
 const { Content } = Layout;
 
 const App = () => (
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/profile" element={<UserProfilePage />} />
               <Route path="/billing" element={<BillingPage />} />
               <Route path="/generator" element={<GeneratorPage />} />
