@@ -72,8 +72,13 @@ public class SubscriptionPlan {
     @Min(value = 1, message = "Concurrent generations must be at least 1")
     private Integer concurrentGenerations = 1;
 
-    @Column(name = "is_active", columnDefinition = "BOOLEAN DEFAULT TRUE")
-    private Boolean isActive = true;
+    @Column(name = "is_active")
+    @Enumerated(EnumType.STRING)
+    private IsActive isActive;
+
+    public  enum IsActive {
+        TRUE, FALSE
+    }
 
     @Column(name = "sort_order", columnDefinition = "INT DEFAULT 0")
     private Integer sortOrder = 0;
