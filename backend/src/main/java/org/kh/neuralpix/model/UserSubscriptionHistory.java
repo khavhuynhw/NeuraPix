@@ -1,7 +1,6 @@
 package org.kh.neuralpix.model;
 
 import jakarta.persistence.*;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -13,7 +12,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "user_subscription_history")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class UserSubscriptionHistory {

@@ -2,7 +2,6 @@ package org.kh.neuralpix.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
@@ -15,7 +14,6 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "subscriptions")
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 public class Subscription {
@@ -90,7 +88,6 @@ public class Subscription {
 
     public  enum SubscriptionStatus{
         ACTIVE,
-        PAST_DUE,
         CANCELLED,
         EXPIRED
     }

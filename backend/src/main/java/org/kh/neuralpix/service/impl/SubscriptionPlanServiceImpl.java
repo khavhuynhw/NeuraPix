@@ -1,14 +1,8 @@
 package org.kh.neuralpix.service.impl;
 
-import lombok.RequiredArgsConstructor;
-import org.kh.neuralpix.dto.SubscriptionPlanDto;
-import org.kh.neuralpix.dto.request.SubscriptionPlanRequestDto;
-import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.model.SubscriptionPlan;
-import org.kh.neuralpix.model.SubscriptionTier;
 import org.kh.neuralpix.repository.SubscriptionPlanRepository;
 import org.kh.neuralpix.service.SubscriptionPlanService;
-import org.kh.neuralpix.utils.EntityMerge;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -18,74 +12,44 @@ import java.util.Optional;
 @Service
 public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
 
-    private final SubscriptionPlanRepository planRepository;
+    private final SubscriptionPlanRepository repository;
 
     @Autowired
-    public SubscriptionPlanServiceImpl(SubscriptionPlanRepository planRepository) {
-        this.planRepository = planRepository;
+    public SubscriptionPlanServiceImpl(SubscriptionPlanRepository repository) {
+        this.repository = repository;
     }
 
     @Override
     public List<SubscriptionPlan> getAll() {
-        return planRepository.findAll();
+        return repository.findAll();
     }
 
     @Override
-    public SubscriptionPlan getById(Long id) {
-        return planRepository.findById(id).orElseThrow(() ->
-            new ResourceNotFoundException("SubscriptionPlan", "id", id.toString()));
+    public Optional<SubscriptionPlan> getById(Long id) {
+        return repository.findById(id);
     }
 
     @Override
-    public SubscriptionPlan create(SubscriptionPlanDto request) {
-        if (planRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("SubscriptionPlan with name '" + request.getName() + "' already exists.");
+    public SubscriptionPlan create(SubscriptionPlan plan) {
+        return repository.save(plan);
+    }
+
+    @Override
+    public SubscriptionPlan update(Long id, SubscriptionPlan plan) {
+        if (!repository.existsById(id)) {
+            throw new IllegalArgumentException("SubscriptionPlan not found with id: " + id);
         }
-        SubscriptionPlan plan = new SubscriptionPlan();
-        plan.setName(request.getName());
-        plan.setDescription(request.getDescription());
-        plan.setMonthlyPrice(request.getMonthlyPrice());
-        plan.setYearlyPrice(request.getYearlyPrice());
-        plan.setTier(SubscriptionTier.valueOf(request.getTier().toUpperCase()));
-        plan.setIsActive(SubscriptionPlan.IsActive.valueOf(request.getIsActive().toUpperCase()));
-        plan.setDailyGenerationLimit(request.getDailyGenerationLimit());
-        plan.setMonthlyGenerationLimit(request.getMonthlyGenerationLimit());
-        plan.setMaxImageResolution(request.getMaxImageResolution());
-        plan.setPriorityProcessing(request.getPriorityProcessing());
-        plan.setWatermarkRemoval(request.getWatermarkRemoval());
-        plan.setCommercialLicense(request.getCommercialLicense());
-        plan.setApiAccess(request.getApiAccess());
-        plan.setAdvancedModels(request.getAdvancedModels());
-        plan.setConcurrentGenerations(request.getConcurrentGenerations());
-        plan.setSortOrder(request.getSortOrder());
-
-        return planRepository.save(plan);
-    }
-
-    @Override
-    public SubscriptionPlan update(Long id, SubscriptionPlanRequestDto request) {
-        SubscriptionPlan existingPlan = planRepository.findById(id).orElseThrow(
-                () -> new ResourceNotFoundException("SubscriptionPlan", "id", id.toString()));
-        if (request.getName() != null && !existingPlan.getName().equals(request.getName()) && planRepository.existsByName(request.getName())) {
-            throw new IllegalArgumentException("SubscriptionPlan with name '" + request.getName() + "' already exists for another plan.");
-        }
-        EntityMerge.merge(request, existingPlan);
-
-        return planRepository.save(existingPlan);
+        plan.setId(id);
+        return repository.save(plan);
     }
 
     @Override
     public void delete(Long id) {
-        if (!planRepository.existsById(id)) {
-            throw new ResourceNotFoundException("SubscriptionPlan", "id", id.toString());
-        }
-        SubscriptionPlan plan = planRepository.findById(id).get();
-        plan.setIsActive(SubscriptionPlan.IsActive.TRUE);
-        planRepository.save(plan);
+        repository.deleteById(id);
     }
 
     @Override
     public List<SubscriptionPlan> getActivePlans() {
-        return planRepository.findByIsActiveTrue();
+        return repository.findByIsActiveTrue();
     }
 }
