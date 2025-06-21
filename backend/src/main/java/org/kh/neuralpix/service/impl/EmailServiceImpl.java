@@ -5,6 +5,7 @@ import com.github.mustachejava.Mustache;
 import com.github.mustachejava.MustacheFactory;
 import lombok.RequiredArgsConstructor;
 import org.kh.neuralpix.service.EmailService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -29,6 +30,7 @@ public class EmailServiceImpl implements EmailService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
+    @Autowired
     public EmailServiceImpl(JavaMailSender mailSender) {
         this.mailSender = mailSender;
         this.mustacheFactory = new DefaultMustacheFactory();

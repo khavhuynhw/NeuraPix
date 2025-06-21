@@ -11,6 +11,7 @@ import org.kh.neuralpix.repository.UserRepository;
 import org.kh.neuralpix.security.JwtTokenProvider;
 import org.kh.neuralpix.service.AuthService;
 import org.kh.neuralpix.service.EmailService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -36,6 +37,7 @@ public class AuthServiceImpl implements AuthService {
     private final EmailService emailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
+    @Autowired
     public AuthServiceImpl(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
