@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Subscription Cancellation - NeuralPix</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .status-badge {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 50px;
+            padding: 8px 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 14px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .cancellation-details {
+            background-color: #fff3cd;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .detail-value {
+            color: #333;
+        }
+        .tier-badge {
+            background-color: #6c757d;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .button-secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        .feedback-section {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #28a745;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            background-color: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e9ecef;
+            margin: 25px 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .immediate-notice {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .access-until {
+            background-color: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Subscription Cancelled</h1>
+            <div class="status-badge">Cancellation Confirmed</div>
+        </div>
+        
+        <div class="content">
+            <p>Hello <strong>{{username}}</strong>,</p>
+            
+            <p>We've successfully processed your request to cancel your <strong>{{tierName}}</strong> subscription. We're sorry to see you go!</p>
+            
+            {{#cancelImmediately}}
+            <div class="immediate-notice">
+                <strong>⚠️ Immediate Cancellation:</strong> Your subscription has been cancelled immediately and you no longer have access to premium features.
+            </div>
+            {{/cancelImmediately}}
+            
+            {{^cancelImmediately}}
+            <div class="access-until">
+                <strong>🕒 Access Until:</strong> You'll continue to have access to your <strong>{{tierName}}</strong> benefits until <strong>{{endDate}}</strong>. After this date, your account will be downgraded to the Free tier.
+            </div>
+            {{/cancelImmediately}}
+            
+            <div class="cancellation-details">
+                <h3 style="margin-top: 0; color: #333;">Cancellation Details</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Cancelled Plan:</span>
+                    <span class="tier-badge">{{tierName}}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Cancellation Date:</span>
+                    <span class="detail-value">{{cancellationDate}}</span>
+                </div>
+                
+                {{#cancellationReason}}
+                <div class="detail-row">
+                    <span class="detail-label">Reason:</span>
+                    <span class="detail-value">{{cancellationReason}}</span>
+                </div>
+                {{/cancellationReason}}
+                
+                {{^cancelImmediately}}
+                <div class="detail-row">
+                    <span class="detail-label">Access Until:</span>
+                    <span class="detail-value highlight">{{endDate}}</span>
+                </div>
+                {{/cancelImmediately}}
+                
+                {{#refundAmount}}
+                <div class="detail-row">
+                    <span class="detail-label">Refund Amount:</span>
+                    <span class="detail-value">{{currency}}{{refundAmount}}</span>
+                </div>
+                {{/refundAmount}}
+            </div>
+
+            <h3 style="color: #333;">What happens next?</h3>
+            <ul style="color: #555; padding-left: 20px;">
+                {{#cancelImmediately}}
+                <li>Your account has been immediately downgraded to the Free tier</li>
+                <li>You now have access to free tier features only</li>
+                {{/cancelImmediately}}
+                {{^cancelImmediately}}
+                <li>You'll continue to enjoy <strong>{{tierName}}</strong> features until <strong>{{endDate}}</strong></li>
+                <li>No further charges will be made to your payment method</li>
+                <li>On <strong>{{endDate}}</strong>, your account will automatically downgrade to the Free tier</li>
+                {{/cancelImmediately}}
+                <li>All your previous generated images will remain in your account</li>
+                <li>You can reactivate your subscription anytime from your dashboard</li>
+            </ul>
+
+            <div class="divider"></div>
+
+            <div style="text-align: center;">
+                <a href="{{dashboardUrl}}" class="button">Go to Dashboard</a>
+                <a href="{{reactivateUrl}}" class="button button-secondary">Reactivate Subscription</a>
+            </div>
+
+            <div class="feedback-section">
+                <h3 style="margin-top: 0; color: #333;">💬 We'd love your feedback</h3>
+                <p>Your feedback helps us improve NeuralPix. Would you mind telling us why you cancelled your subscription?</p>
+                <div style="text-align: center; margin-top: 15px;">
+                    <a href="{{feedbackUrl}}" style="color: #28a745; text-decoration: none; font-weight: 600;">Share Feedback</a>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            
+            <p><strong>Changed your mind?</strong> You can easily reactivate your subscription anytime from your dashboard. We'll be here whenever you're ready to return!</p>
+            
+            <p>If you have any questions about your cancellation or need assistance, please don't hesitate to contact our support team.</p>
+            
+            <p>Thank you for being part of the NeuralPix community!</p>
+            
+            <p>Best regards,<br>
+            <strong>The NeuralPix Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>If you need help, contact us at support@neuralpix.com</p>
+            <p>&copy; {{currentYear}} NeuralPix. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 

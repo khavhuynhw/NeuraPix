@@ -11,6 +11,7 @@ public interface GeneratedImageService {
     List<GeneratedImage> findByPromptId(Long promptId);
     List<GeneratedImage> findPublicImages();
     GeneratedImage save(GeneratedImage image);
+    GeneratedImage createImageWithUsageTracking(GeneratedImage image);
     void deleteById(Long id);
     GeneratedImage update(Long id, GeneratedImage image);
     void incrementLikesCount(Long id);

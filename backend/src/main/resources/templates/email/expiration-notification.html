@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Subscription Expiration - NeuralPix</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .header {
+            text-align: center;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            color: #8b4513;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+            font-weight: 300;
+        }
+        .status-badge {
+            background-color: rgba(139, 69, 19, 0.2);
+            border-radius: 50px;
+            padding: 8px 20px;
+            margin-top: 15px;
+            display: inline-block;
+            font-size: 14px;
+            color: #8b4513;
+            font-weight: 600;
+        }
+        .content {
+            padding: 30px;
+        }
+        .expiration-details {
+            background-color: #fff3cd;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #ffc107;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+        }
+        .detail-value {
+            color: #333;
+        }
+        .tier-badge {
+            background-color: #ffc107;
+            color: #212529;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 600;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .button:hover {
+            transform: translateY(-2px);
+        }
+        .button-primary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+        .button-secondary {
+            background: linear-gradient(135deg, #fd7e14 0%, #e83e8c 100%);
+        }
+        .expiration-notice {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .expired-notice {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+        }
+        .features-losing {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #dc3545;
+        }
+        .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #555;
+        }
+        .cross-mark {
+            color: #dc3545;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .checkmark {
+            color: #28a745;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        .free-tier-features {
+            background-color: #d4edda;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            border-left: 4px solid #28a745;
+        }
+        .footer {
+            text-align: center;
+            padding: 30px 20px;
+            background-color: #f8f9fa;
+            color: #666;
+            font-size: 14px;
+        }
+        .footer p {
+            margin: 5px 0;
+        }
+        .divider {
+            height: 1px;
+            background-color: #e9ecef;
+            margin: 25px 0;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: 600;
+        }
+        .urgency-high {
+            color: #dc3545;
+            font-weight: 700;
+        }
+        .urgency-medium {
+            color: #fd7e14;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            {{#isExpired}}
+            <h1>⏰ Subscription Expired</h1>
+            <div class="status-badge">Subscription Has Ended</div>
+            {{/isExpired}}
+            {{^isExpired}}
+            <h1>⚠️ Subscription Expiring Soon</h1>
+            <div class="status-badge">Action Required</div>
+            {{/isExpired}}
+        </div>
+        
+        <div class="content">
+            <p>Hello <strong>{{username}}</strong>,</p>
+            
+            {{#isExpired}}
+            <p>Your <strong>{{tierName}}</strong> subscription has expired and your account has been downgraded to the Free tier.</p>
+            
+            <div class="expired-notice">
+                <strong>🚨 Subscription Expired:</strong> Your premium features are no longer available. Upgrade now to restore your <strong>{{tierName}}</strong> benefits!
+            </div>
+            {{/isExpired}}
+            
+            {{^isExpired}}
+            <p>Your <strong>{{tierName}}</strong> subscription will expire <span class="{{urgencyClass}}">{{timeUntilExpiry}}</span>.</p>
+            
+            <div class="expiration-notice">
+                <strong>⏰ Expiring {{timeUntilExpiry}}:</strong> Don't lose access to your premium features! Renew your subscription to continue enjoying <strong>{{tierName}}</strong> benefits.
+            </div>
+            {{/isExpired}}
+            
+            <div class="expiration-details">
+                <h3 style="margin-top: 0; color: #333;">Subscription Details</h3>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Plan:</span>
+                    <span class="tier-badge">{{tierName}}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">{{#isExpired}}Expired On:{{/isExpired}}{{^isExpired}}Expires On:{{/isExpired}}</span>
+                    <span class="detail-value highlight">{{expirationDate}}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Billing Cycle:</span>
+                    <span class="detail-value">{{billingCycle}}</span>
+                </div>
+                
+                <div class="detail-row">
+                    <span class="detail-label">Price to Renew:</span>
+                    <span class="detail-value">{{currency}}{{price}}/{{billingCycleLower}}</span>
+                </div>
+            </div>
+
+            {{#isExpired}}
+            <div class="features-losing">
+                <h3 style="margin-top: 0; color: #333;">💔 Features You've Lost:</h3>
+                {{#lostFeatures}}
+                <div class="feature-item">
+                    <span class="cross-mark">✗</span>
+                    <span>{{.}}</span>
+                </div>
+                {{/lostFeatures}}
+            </div>
+            {{/isExpired}}
+            
+            {{^isExpired}}
+            <div class="features-losing">
+                <h3 style="margin-top: 0; color: #333;">⚠️ Features You'll Lose:</h3>
+                {{#featuresAtRisk}}
+                <div class="feature-item">
+                    <span class="cross-mark">✗</span>
+                    <span>{{.}}</span>
+                </div>
+                {{/featuresAtRisk}}
+            </div>
+            {{/isExpired}}
+
+            <div class="free-tier-features">
+                <h3 style="margin-top: 0; color: #333;">✅ Free Tier Features Available:</h3>
+                {{#freeTierFeatures}}
+                <div class="feature-item">
+                    <span class="checkmark">✓</span>
+                    <span>{{.}}</span>
+                </div>
+                {{/freeTierFeatures}}
+            </div>
+
+            <div class="divider"></div>
+
+            <div style="text-align: center;">
+                {{#isExpired}}
+                <a href="{{renewUrl}}" class="button button-primary">Reactivate {{tierName}} Plan</a>
+                <a href="{{upgradeUrl}}" class="button button-secondary">View All Plans</a>
+                {{/isExpired}}
+                {{^isExpired}}
+                <a href="{{renewUrl}}" class="button button-primary">Renew {{tierName}} Plan</a>
+                <a href="{{upgradeUrl}}" class="button button-secondary">Upgrade Plan</a>
+                {{/isExpired}}
+            </div>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <a href="{{dashboardUrl}}" style="color: #667eea; text-decoration: none; font-weight: 600;">Go to Dashboard</a>
+            </div>
+
+            <div class="divider"></div>
+            
+            {{#isExpired}}
+            <p><strong>Don't worry!</strong> Your account data, including all your previously generated images, is safe. You can reactivate your subscription anytime to restore full access.</p>
+            {{/isExpired}}
+            {{^isExpired}}
+            <p><strong>Need help?</strong> Our support team is here to assist you with any questions about your subscription or renewal process.</p>
+            {{/isExpired}}
+            
+            <p>Thank you for choosing NeuralPix. We hope to continue serving you!</p>
+            
+            <p>Best regards,<br>
+            <strong>The NeuralPix Team</strong></p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>If you need help, contact us at support@neuralpix.com</p>
+            <p>&copy; {{currentYear}} NeuralPix. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html> 
