@@ -14,6 +14,8 @@ import org.kh.neuralpix.repository.SubscriptionPlanRepository;
 import org.kh.neuralpix.repository.SubscriptionRepository;
 import org.kh.neuralpix.repository.UserRepository;
 import org.kh.neuralpix.repository.UserSubscriptionHistoryRepository;
+import org.kh.neuralpix.service.EmailService;
+import org.kh.neuralpix.service.PayOSPaymentService;
 import org.kh.neuralpix.service.SubscriptionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -31,6 +34,8 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final UserRepository userRepository;
     private final UserSubscriptionHistoryRepository historyRepository;
     private final SubscriptionPlanRepository subscriptionPlanRepository;
+    private final PayOSPaymentService payOSPaymentService;
+    private final EmailService emailService;
 
 
     @Override
@@ -45,8 +50,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     }
 
     @Override
-    public List<Subscription> getByUserId(Long userId) {
+    public Subscription getByUserId(Long userId) {
         return subscriptionRepository.findByUserId(userId);
+    }
+
+    @Override
+    public Optional<Subscription> getActiveSubscriptionByUserId(Long userId) {
+        Subscription activeSubscription = subscriptionRepository.findActiveByUserId(userId);
+        return Optional.ofNullable(activeSubscription);
     }
 
     @Override
@@ -75,6 +86,26 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         BigDecimal price = "yearly".equalsIgnoreCase(request.getBillingCycle()) ? plan.getYearlyPrice() : plan.getMonthlyPrice();
 
+        // Create PayOS payment link if PayOS is the payment provider
+        String paymentLinkId = null;
+        String checkoutUrl = null;
+        if ("payos".equalsIgnoreCase(request.getPaymentProvider())) {
+            try {
+                Long orderCode = System.currentTimeMillis() / 1000;
+                String description = "Subscription to " + request.getTier() + " plan - " + request.getBillingCycle();
+                
+                vn.payos.type.CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
+                        orderCode, price, description, user.getEmail(), user.getUsername());
+                
+                paymentLinkId = paymentResponse.getPaymentLinkId();
+                checkoutUrl = paymentResponse.getCheckoutUrl();
+                
+                log.info("PayOS payment link created for subscription: {}", paymentLinkId);
+            } catch (Exception e) {
+                log.error("Failed to create PayOS payment link for subscription", e);
+                throw new RuntimeException("Failed to create payment link: " + e.getMessage());
+            }
+        }
 
         Subscription subscription = new Subscription().builder()
                 .user(user)
@@ -98,13 +129,29 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         userRepository.save(user);
 
         // Record subscription history
-//        recordSubscriptionHistory(user.getId(), subscription.getId(), "created", null, request.getTier(), price);
+        recordSubscriptionHistory(user.getId(), subscription.getId(), "created", null, request.getTier(), price);
 
         // Send confirmation notification
-//        notificationService.sendSubscriptionConfirmation(user, subscription);
-        subscriptionRepository.save(subscription);
+        emailService.sendSubscriptionConfirmation(user, subscription);
+        subscription = subscriptionRepository.save(subscription);
+        
+        // Set the external subscription ID if PayOS was used
+        if (paymentLinkId != null) {
+            subscription.setExternalSubscriptionId(paymentLinkId);
+            subscription = subscriptionRepository.save(subscription);
+        }
+        
         log.info("Successfully created subscription: {} for user: {}", subscription.getId(), user.getId());
-       return convertToDTO(subscription);
+        
+        SubscriptionDto result = convertToDTO(subscription);
+        
+        // Add PayOS checkout URL to the response (could be added as a custom field or metadata)
+        if (checkoutUrl != null) {
+            log.info("PayOS checkout URL for subscription {}: {}", subscription.getId(), checkoutUrl);
+            // You can add checkoutUrl to response metadata or return it separately
+        }
+        
+        return result;
     }
 
     @Override
@@ -205,63 +252,127 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         User user = userRepository.findById(subscription.getUserId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + subscription.getUserId()));
 
-//        notificationService.sendCancellationConfirmation(user, subscription);
+        // Send cancellation confirmation email
+        emailService.sendCancellationConfirmation(user, subscription);
     }
 
     @Override
     @Transactional
     public void renewSubscription(Long subscriptionId) {
-//        log.info("Renewing subscription: {}", subscriptionId);
-//
-//        Subscription subscription = subscriptionRepository.findById(subscriptionId)
-//                .orElseThrow(() -> new SubscriptionException("Subscription not found"));
-//
-//        if (!subscription.getAutoRenew()) {
-//            log.info("Subscription {} has auto-renew disabled, expiring instead", subscriptionId);
-//            expireSubscription(subscriptionId);
-//            return;
-//        }
-//
-//        try {
-//            // Process payment
-//            PaymentProvider paymentProvider = getPaymentProvider(subscription.getPaymentProvider());
-//            boolean paymentSuccessful = paymentProvider.processRenewalPayment(subscription);
-//
-//            if (paymentSuccessful) {
-//                // Extend subscription
-//                subscription.setStartDate(LocalDateTime.now());
-//                subscription.setEndDate(calculateEndDate(subscription.getBillingCycle()));
-//                subscription.setNextBillingDate(calculateNextBillingDate(subscription.getBillingCycle()));
-//                subscription.setStatus("active");
-//                subscription.setUpdatedAt(LocalDateTime.now());
-//
-//                subscriptionRepository.save(subscription);
-//
-//                // Record history
-//                recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "renewed",
-//                        subscription.getTier(), subscription.getTier(), subscription.getPrice());
-//
-//                // Send renewal confirmation
-//                User user = userRepository.findById(subscription.getUserId()).orElseThrow();
-//                notificationService.sendRenewalConfirmation(user, subscription);
-//
-//            } else {
-//                // Payment failed - mark as past due
-//                subscription.setStatus("past_due");
-//                subscription.setUpdatedAt(LocalDateTime.now());
-//                subscriptionRepository.save(subscription);
-//
-//                // Send payment failure notification
-//                User user = userRepository.findById(subscription.getUserId()).orElseThrow();
-//                notificationService.sendPaymentFailureNotification(user, subscription);
-//            }
-//
-//        } catch (Exception e) {
-//            log.error("Failed to renew subscription: {}", subscriptionId, e);
-//            subscription.setStatus("past_due");
-//            subscription.setUpdatedAt(LocalDateTime.now());
-//            subscriptionRepository.save(subscription);
-//        }
+        log.info("Renewing subscription: {}", subscriptionId);
+
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new SubscriptionException("Subscription not found"));
+
+        if (!subscription.getAutoRenew()) {
+            log.info("Subscription {} has auto-renew disabled, expiring instead", subscriptionId);
+            expireSubscription(subscriptionId);
+            return;
+        }
+
+        try {
+            User user = userRepository.findById(subscription.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+            // Process payment with PayOS
+            boolean paymentSuccessful = processRenewalPayment(subscription, user);
+
+            if (paymentSuccessful) {
+                // Extend subscription
+                subscription.setStartDate(LocalDateTime.now());
+                subscription.setEndDate(calculateEndDate(subscription.getBillingCycle()));
+                subscription.setNextBillingDate(calculateNextBillingDate(subscription.getBillingCycle()));
+                subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+                subscription.setUpdatedAt(LocalDateTime.now());
+
+                subscriptionRepository.save(subscription);
+
+                // Record history
+                recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "RENEWED",
+                        subscription.getTier().name(), subscription.getTier().name(), subscription.getPrice());
+
+                // Send renewal confirmation
+                emailService.sendSubscriptionConfirmation(user, subscription);
+                
+                log.info("Successfully renewed subscription: {}", subscriptionId);
+
+            } else {
+                // Payment failed - mark as past due
+                subscription.setStatus(Subscription.SubscriptionStatus.PAST_DUE);
+                subscription.setUpdatedAt(LocalDateTime.now());
+                subscriptionRepository.save(subscription);
+
+                // Send payment failure notification (you can create this method in EmailService)
+                log.warn("Payment failed for subscription renewal: {}", subscriptionId);
+                // emailService.sendPaymentFailureNotification(user, subscription);
+            }
+
+        } catch (Exception e) {
+            log.error("Failed to renew subscription: {}", subscriptionId, e);
+            subscription.setStatus(Subscription.SubscriptionStatus.PAST_DUE);
+            subscription.setUpdatedAt(LocalDateTime.now());
+            subscriptionRepository.save(subscription);
+        }
+    }
+
+    /**
+     * Process renewal payment using PayOS
+     */
+    private boolean processRenewalPayment(Subscription subscription, User user) {
+        try {
+            if ("payos".equalsIgnoreCase(subscription.getPaymentProvider())) {
+                // Create PayOS payment for renewal
+                Long orderCode = System.currentTimeMillis() / 1000;
+                String description = "Renewal for " + subscription.getTier() + " subscription - " + subscription.getBillingCycle();
+                
+                vn.payos.type.CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
+                        orderCode, subscription.getPrice(), description, user.getEmail(), user.getUsername());
+                
+                if (paymentResponse != null && paymentResponse.getCheckoutUrl() != null) {
+                    // Update external subscription ID
+                    subscription.setExternalSubscriptionId(paymentResponse.getPaymentLinkId());
+                    
+                    log.info("PayOS renewal payment link created for subscription: {} with order code: {}", 
+                            subscription.getId(), orderCode);
+                    log.info("Checkout URL: {}", paymentResponse.getCheckoutUrl());
+                    
+                    // For automatic renewal, you might want to implement webhook handling
+                    // For now, we'll assume payment is successful (in real scenario, this would be handled by webhook)
+                    return true;
+                } else {
+                    log.error("Failed to create PayOS payment link for renewal");
+                    return false;
+                }
+            } else {
+                log.warn("Unsupported payment provider for renewal: {}", subscription.getPaymentProvider());
+                return false;
+            }
+        } catch (Exception e) {
+            log.error("Error processing renewal payment for subscription: {}", subscription.getId(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Calculate end date based on billing cycle
+     */
+    private LocalDateTime calculateEndDate(Subscription.BillingCycle billingCycle) {
+        LocalDateTime now = LocalDateTime.now();
+        switch (billingCycle) {
+            case MONTHLY:
+                return now.plusMonths(1);
+            case YEARLY:
+                return now.plusYears(1);
+            default:
+                return now.plusMonths(1);
+        }
+    }
+
+    /**
+     * Calculate next billing date based on billing cycle
+     */
+    private LocalDateTime calculateNextBillingDate(Subscription.BillingCycle billingCycle) {
+        return calculateEndDate(billingCycle);
     }
 
     @Override
@@ -272,24 +383,24 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(subscriptionId)
                 .orElseThrow(() -> new SubscriptionException("Subscription not found"));
 
-        subscription.setStatus(Subscription.SubscriptionStatus.valueOf("expired"));
+        subscription.setStatus(Subscription.SubscriptionStatus.EXPIRED);
         subscription.setEndDate(LocalDateTime.now());
         subscription.setUpdatedAt(LocalDateTime.now());
 
         // Downgrade user to free tier
         User user = userRepository.findById(subscription.getUserId()).orElseThrow();
         String oldTier = String.valueOf(user.getSubscriptionTier());
-        user.setSubscriptionTier(SubscriptionTier.valueOf("free"));
+        user.setSubscriptionTier(SubscriptionTier.FREE);
         userRepository.save(user);
 
         subscriptionRepository.save(subscription);
 
         // Record history
-        recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "expired",
-                oldTier, "free", BigDecimal.ZERO);
+        recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "EXPIRED",
+                oldTier, "FREE", BigDecimal.ZERO);
 
-        // Send expiration notification
-//        notificationService.sendExpirationNotification(user, subscription);
+        // Send expiration notification email
+        emailService.sendExpirationNotification(user, subscription);
     }
 
     @Override

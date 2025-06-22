@@ -37,6 +37,12 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
     }
 
     @Override
+    public Optional<SubscriptionPlan> getByTier(SubscriptionTier tier) {
+        SubscriptionPlan plan = planRepository.findByTierAndIsActive(tier, SubscriptionPlan.IsActive.TRUE);
+        return Optional.ofNullable(plan);
+    }
+
+    @Override
     public SubscriptionPlan create(SubscriptionPlanDto request) {
         if (planRepository.existsByName(request.getName())) {
             throw new IllegalArgumentException("SubscriptionPlan with name '" + request.getName() + "' already exists.");

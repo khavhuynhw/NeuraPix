@@ -7,11 +7,14 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
-    List<Subscription> findByUserId(Long userId);
+    Subscription findByUserId(Long userId);
     List<Subscription> findByStatus(Subscription.SubscriptionStatus status);
     @Query("SELECT s FROM Subscription s WHERE s.user.id = :userId AND s.status = 'ACTIVE'")
     Subscription findActiveByUserId(@Param("userId") Long userId);
+    
+    Optional<Subscription> findByExternalSubscriptionId(String externalSubscriptionId);
 }

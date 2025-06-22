@@ -12,7 +12,8 @@ import java.util.Optional;
 public interface SubscriptionService {
     List<Subscription> getAll();
     Subscription getById(Long id);
-    List<Subscription> getByUserId(Long userId);
+    Subscription getByUserId(Long userId);
+    Optional<Subscription> getActiveSubscriptionByUserId(Long userId);
     List<Subscription> getByStatus(Subscription.SubscriptionStatus status);
     SubscriptionDto create(SubscriptionCreateRequestDto request);
     SubscriptionDto update(Long id, SubscriptionUpdateDto request);
