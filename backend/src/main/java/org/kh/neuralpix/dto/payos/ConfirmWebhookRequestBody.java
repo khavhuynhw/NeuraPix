@@ -6,8 +6,10 @@ import lombok.Setter;
 @Setter
 public class ConfirmWebhookRequestBody {
     private String webhookUrl;
+    private PaymentResponseDto data;
 
-    public ConfirmWebhookRequestBody(String webhookUrl) {
+    public ConfirmWebhookRequestBody(String webhookUrl,PaymentResponseDto data) {
         this.webhookUrl = webhookUrl;
+        this.data = data;
     }
 }
