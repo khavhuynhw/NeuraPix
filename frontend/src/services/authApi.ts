@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
+import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, UserResponse, SubscriptionResponse } from "../types/auth";
 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -93,5 +93,42 @@ export async function confirmResetPw(
       throw new Error(error.response.data.message || "Reset failed");
     }
     throw new Error("Reset failed");
+  }
+}
+
+/**
+ * Lấy danh sách tất cả user từ BE.
+ * @returns {Promise<UserResponse[]>}
+ */
+export async function getAllUsers(): Promise<UserResponse[]> {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/users`, {
+      headers: {
+        "Content-Type": "application/json",
+        // "Authorization": `Bearer ${localStorage.getItem("jwt_token")}`,
+      },
+    });
+    console.log("getAllUsers response:", response.data);
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch users");
+  }
+}
+
+/**
+ * Lấy danh sách tất cả subscriptions từ BE.
+ * @returns {Promise<SubscriptionResponse[]>}
+ */
+export async function getAllSubscriptions(): Promise<SubscriptionResponse[]> {
+  try {
+    const response = await axios.get(`${BASE_URL}/api/subscriptions`, {
+      headers: {
+        "Content-Type": "application/json",
+        // "Authorization": `Bearer ${localStorage.getItem("jwt_token")}`,
+      },
+    });
+    return response.data;
+  } catch (error: any) {
+    throw new Error(error.response?.data?.message || "Failed to fetch subscriptions");
   }
 }
