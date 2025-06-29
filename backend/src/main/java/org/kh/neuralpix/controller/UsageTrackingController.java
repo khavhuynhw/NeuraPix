@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.HashMap;
 
 @RestController
-@RequestMapping("/api/usage-tracking")
+@RequestMapping("/api/v1/usage-tracking")
 public class UsageTrackingController {
 
     private final UsageTrackingService service;
