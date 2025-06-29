@@ -14,6 +14,7 @@ import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
+import AdminPage from "./pages/AdminPage";
 const { Content } = Layout;
 
 const App = () => (
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="/generator" element={<GeneratorPage />} />
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/pricing" element={<PricingPage />} />
+              <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </Content>
