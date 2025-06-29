@@ -86,12 +86,12 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
             throw new ResourceNotFoundException("SubscriptionPlan", "id", id.toString());
         }
         SubscriptionPlan plan = planRepository.findById(id).get();
-        plan.setIsActive(SubscriptionPlan.IsActive.TRUE);
+        plan.setIsActive(SubscriptionPlan.IsActive.FALSE);
         planRepository.save(plan);
     }
 
     @Override
     public List<SubscriptionPlan> getActivePlans() {
-        return planRepository.findByIsActiveTrue();
+        return planRepository.findByIsActive(SubscriptionPlan.IsActive.TRUE);
     }
 }

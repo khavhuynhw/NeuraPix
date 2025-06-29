@@ -9,7 +9,8 @@ import java.util.List;
 
 @Repository
 public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPlan, Long> {
-    List<SubscriptionPlan> findByIsActiveTrue();
+
+    List<SubscriptionPlan> findByIsActive(SubscriptionPlan.IsActive isActive);
     SubscriptionPlan findByTierAndIsActive(SubscriptionTier tier, SubscriptionPlan.IsActive isActive);
     boolean existsByName(String name);
 }
