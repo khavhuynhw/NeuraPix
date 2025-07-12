@@ -48,14 +48,13 @@ const App = () => (
             }}
           >
             <Routes>
-              <Route path="/dashboard" element={<Index />} />
+              <Route path="*" element={<Index />} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/profile" element={<UserProfilePage />} />
               <Route path="/billing" element={<BillingPage />} />
-              <Route path="/generator" element={<GeneratorPage />} />
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="*" element={<NotFound />} />

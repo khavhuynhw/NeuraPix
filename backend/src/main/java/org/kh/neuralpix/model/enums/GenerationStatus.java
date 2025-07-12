@@ -1,4 +1,4 @@
-package org.kh.neuralpix.model;
+package org.kh.neuralpix.model.enums;
 
 public enum GenerationStatus {
     PENDING,

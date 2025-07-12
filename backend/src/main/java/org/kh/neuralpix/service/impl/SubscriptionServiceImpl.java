@@ -10,6 +10,7 @@ import org.kh.neuralpix.dto.request.SubscriptionUpdateDto;
 import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.exception.SubscriptionException;
 import org.kh.neuralpix.model.*;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 import org.kh.neuralpix.repository.SubscriptionPlanRepository;
 import org.kh.neuralpix.repository.SubscriptionRepository;
 import org.kh.neuralpix.repository.UserRepository;
