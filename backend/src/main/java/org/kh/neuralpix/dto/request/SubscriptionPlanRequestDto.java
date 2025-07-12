@@ -3,7 +3,7 @@ package org.kh.neuralpix.dto.request;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.kh.neuralpix.model.SubscriptionTier;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

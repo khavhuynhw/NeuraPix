@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.URL;
+import org.kh.neuralpix.model.enums.GenerationStatus;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -85,12 +86,6 @@ public class GeneratedImage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
-
-    @OneToMany(mappedBy = "image", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ImageLike> imageLikes;
-
-    @OneToMany(mappedBy = "image", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ImageTag> imageTags;
 
     @OneToMany(mappedBy = "image", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CollectionImage> collectionImages;
