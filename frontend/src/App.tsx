@@ -55,7 +55,6 @@ const App = () => (
               <Route path="/reset-password" element={<ResetPasswordPage />} />
               <Route path="/profile" element={<UserProfilePage />} />
               <Route path="/billing" element={<BillingPage />} />
-              <Route path="/generator" element={<GeneratorPage />} />
               <Route path="/features" element={<FeaturesPage />} />
               <Route path="/pricing" element={<PricingPage />} />
               <Route path="*" element={<NotFound />} />

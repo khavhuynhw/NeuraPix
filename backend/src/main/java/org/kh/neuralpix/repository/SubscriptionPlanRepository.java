@@ -1,7 +1,7 @@
 package org.kh.neuralpix.repository;
 
 import org.kh.neuralpix.model.SubscriptionPlan;
-import org.kh.neuralpix.model.SubscriptionTier;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

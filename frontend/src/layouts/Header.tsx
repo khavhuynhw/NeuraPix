@@ -276,6 +276,50 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                 Sign In
               </Button>
             )}
+            {/* <Button
+              type="primary"
+              onClick={handleGetStarted}
+              style={{
+                background:
+                  "linear-gradient(135deg, #0079FF 0%, #00C7FF 50%, #0079FF 100%)",
+                borderColor: "transparent",
+                borderRadius: 20,
+                fontWeight: 700,
+                height: 44,
+                paddingLeft: 24,
+                paddingRight: 24,
+                fontSize: 15,
+                boxShadow: "0 8px 25px rgba(0, 121, 255, 0.4)",
+                transition: "all 0.3s ease",
+                transform: "scale(1)",
+                position: "relative",
+                overflow: "hidden",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform =
+                  "scale(1.05) translateY(-3px)";
+                e.currentTarget.style.boxShadow =
+                  "0 12px 35px rgba(0, 121, 255, 0.5)";
+                e.currentTarget.style.background =
+                  "linear-gradient(135deg, #3399FF 0%, #00E5FF 50%, #3399FF 100%)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1) translateY(0)";
+                e.currentTarget.style.boxShadow =
+                  "0 8px 25px rgba(0, 121, 255, 0.4)";
+                e.currentTarget.style.background =
+                  "linear-gradient(135deg, #0079FF 0%, #00C7FF 50%, #0079FF 100%)";
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = "scale(0.98) translateY(0)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform =
+                  "scale(1.05) translateY(-3px)";
+              }}
+            >
+              ✨ Get Started
+            </Button> */}
           </div>
         </div>
       </div>
