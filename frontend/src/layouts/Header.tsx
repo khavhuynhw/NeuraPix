@@ -6,6 +6,7 @@ import {
   SettingOutlined,
   LogoutOutlined,
 } from "@ant-design/icons";
+import { useAuth } from "../context/AuthContext";
 
 const { Header: AntHeader } = Layout;
 
@@ -15,9 +16,7 @@ interface HeaderProps {
 
 export const Header = ({ onGetStarted }: HeaderProps) => {
   const navigate = useNavigate();
-
-  // Mock auth state - in real app this would come from auth context
-  const isLoggedIn = false; // Change to true to see profile dropdown
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleGetStarted = () => {
     if (onGetStarted) {
@@ -30,6 +29,11 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         block: "start",
       });
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   const userMenuItems = [
@@ -52,12 +56,25 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Logout",
-      onClick: () => {
-        // Handle logout logic
-        console.log("Logging out...");
-      },
+      onClick: handleLogout,
     },
   ];
+
+      // Generate avatar from user email
+    const getUserAvatar = () => {
+      if (user?.avatar) {
+        return user.avatar;
+      }
+      // Generate a colorful avatar based on user email
+      const email = user?.email || "user@example.com";
+      const name = email.split('@')[0];
+      const colors = [
+        "#0079FF", "#00C7FF", "#FF6B6B", "#4ECDC4", "#45B7D1", 
+        "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"
+      ];
+      const colorIndex = name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % colors.length;
+      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
+    };
 
   return (
     <AntHeader
@@ -144,32 +161,6 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
             >
               Features
             </a>
-            <Button
-              type="link"
-              onClick={() => navigate("/generator")}
-              style={{
-                color: "#64748b",
-                fontSize: 16,
-                fontWeight: 500,
-                padding: "8px 16px",
-                height: "auto",
-                borderRadius: 20,
-                transition: "all 0.3s ease",
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#0079FF";
-                e.currentTarget.style.background = "rgba(0, 121, 255, 0.05)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#64748b";
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Generator
-            </Button>
             <Link
               to="/pricing"
               style={{
@@ -195,7 +186,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
             >
               Pricing
             </Link>
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"
@@ -229,14 +220,14 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                 >
                   <Avatar
                     size={32}
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face"
+                    src={getUserAvatar()}
                     style={{
                       border: "2px solid #0079FF",
                       boxShadow: "0 2px 8px rgba(0, 121, 255, 0.3)",
                     }}
                   />
                   <span style={{ color: "#1e293b", fontWeight: 600 }}>
-                    Alex
+                    {user?.email || "User"}
                   </span>
                 </div>
               </Dropdown>
@@ -285,50 +276,6 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                 Sign In
               </Button>
             )}
-            <Button
-              type="primary"
-              onClick={handleGetStarted}
-              style={{
-                background:
-                  "linear-gradient(135deg, #0079FF 0%, #00C7FF 50%, #0079FF 100%)",
-                borderColor: "transparent",
-                borderRadius: 20,
-                fontWeight: 700,
-                height: 44,
-                paddingLeft: 24,
-                paddingRight: 24,
-                fontSize: 15,
-                boxShadow: "0 8px 25px rgba(0, 121, 255, 0.4)",
-                transition: "all 0.3s ease",
-                transform: "scale(1)",
-                position: "relative",
-                overflow: "hidden",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform =
-                  "scale(1.05) translateY(-3px)";
-                e.currentTarget.style.boxShadow =
-                  "0 12px 35px rgba(0, 121, 255, 0.5)";
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, #3399FF 0%, #00E5FF 50%, #3399FF 100%)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1) translateY(0)";
-                e.currentTarget.style.boxShadow =
-                  "0 8px 25px rgba(0, 121, 255, 0.4)";
-                e.currentTarget.style.background =
-                  "linear-gradient(135deg, #0079FF 0%, #00C7FF 50%, #0079FF 100%)";
-              }}
-              onMouseDown={(e) => {
-                e.currentTarget.style.transform = "scale(0.98) translateY(0)";
-              }}
-              onMouseUp={(e) => {
-                e.currentTarget.style.transform =
-                  "scale(1.05) translateY(-3px)";
-              }}
-            >
-              ✨ Get Started
-            </Button>
           </div>
         </div>
       </div>

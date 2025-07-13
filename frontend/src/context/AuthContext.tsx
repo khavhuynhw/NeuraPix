@@ -45,8 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setRefreshToken(data.refreshToken);
       localStorage.setItem("refreshToken", data.refreshToken);
     }
-    // Optionally decode token to set user info
-    setUser({}); // Set user info here if you decode JWT
+    setUser({});
   };
 
   const logout = () => {
