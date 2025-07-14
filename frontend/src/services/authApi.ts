@@ -4,15 +4,11 @@ import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginR
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
-/**
- * Authenticates a user and returns a JWT token.
- * @param {LoginPayload} payload - The login credentials.
- * @returns {Promise<LoginResponse>} - The response containing the JWT token or error message.
- */
+
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const response = await axios.post(
-      `${BASE_URL}auth/login`,
+      `${BASE_URL}/auth/login`,
       payload,
       {
         headers: {
@@ -21,9 +17,8 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
       }
     );
 
-    // Save JWT token to localStorage if present
-    if (response.data.token) {
-      localStorage.setItem("jwt_token", response.data.token);
+    if (response.data.accessToken) {
+      localStorage.setItem("accessToken", response.data.accessToken);
     }
 
     return response.data;
@@ -41,7 +36,7 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
  */
 export async function register(payload: RegisterPayload): Promise<void> {
   try {
-    await axios.post(`${BASE_URL}auth/register`, payload, {
+    await axios.post(`${BASE_URL}/auth/register`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -60,7 +55,7 @@ export async function register(payload: RegisterPayload): Promise<void> {
  */
 export async function resetPw(payload: ForgotPwPayload): Promise<void> {
   try {
-    await axios.post(`${BASE_URL}auth/reset-password`, payload, {
+    await axios.post(`${BASE_URL}/auth/reset-password`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -83,7 +78,7 @@ export async function confirmResetPw(
 ): Promise<void> {
   console.log(payload)
   try {
-    await axios.post(`${BASE_URL}auth/reset-password/confirm`, payload, {
+    await axios.post(`${BASE_URL}/auth/reset-password/confirm`, payload, {
       headers: {
         "Content-Type": "application/json",
       },

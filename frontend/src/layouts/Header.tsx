@@ -5,6 +5,7 @@ import {
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -49,6 +50,17 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       label: "Settings",
       onClick: () => navigate("/profile?tab=settings"),
     },
+    ...(user?.role === "ADMIN" || user?.role === "admin" ? [
+      {
+        type: "divider" as const,
+      },
+      {
+        key: "admin",
+        icon: <DashboardOutlined />,
+        label: "Admin Dashboard",
+        onClick: () => navigate("/admin/dashboard"),
+      },
+    ] : []),
     {
       type: "divider" as const,
     },
@@ -60,21 +72,35 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
     },
   ];
 
-      // Generate avatar from user email
-    const getUserAvatar = () => {
-      if (user?.avatar) {
-        return user.avatar;
-      }
-      // Generate a colorful avatar based on user email
-      const email = user?.email || "user@example.com";
-      const name = email.split('@')[0];
-      const colors = [
-        "#0079FF", "#00C7FF", "#FF6B6B", "#4ECDC4", "#45B7D1", 
-        "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"
-      ];
-      const colorIndex = name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0) % colors.length;
-      return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
-    };
+
+  // Extract user display name - fallback to email or "User"
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.username) {
+      return user.username;
+    }
+    if (user?.email) {
+      return user.email; // Show full email instead of just username part
+    }
+    return "User";
+  };
+
+  // Generate avatar from user info
+  const getUserAvatar = () => {
+    if (user?.avatar) {
+      return user.avatar;
+    }
+    // Generate a colorful avatar based on user name
+    const name = getUserDisplayName();
+    const colors = [
+      "#0079FF", "#00C7FF", "#FF6B6B", "#4ECDC4", "#45B7D1", 
+      "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"
+    ];
+    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
+  };
 
   return (
     <AntHeader
@@ -104,7 +130,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         >
           <div style={{ display: "flex", alignItems: "center" }}>
             <Link
-              to="/dashboard"
+              to="/"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -202,7 +228,6 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                     borderRadius: 20,
                     transition: "all 0.3s ease",
                     marginRight: 8,
-                    border: "1px solid rgba(0, 121, 255, 0.2)",
                     background: "rgba(0, 121, 255, 0.05)",
                   }}
                   onMouseEnter={(e) => {

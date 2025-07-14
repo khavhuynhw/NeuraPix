@@ -6,7 +6,8 @@ import {
   UserOutlined,
   RocketOutlined,
 } from "@ant-design/icons";
-
+import { Link } from "react-router-dom";
+import { GeneratorPage } from "../pages/GeneratorPage";
 const { Title, Paragraph } = Typography;
 
 interface HeroSectionProps {
@@ -124,6 +125,7 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
 
               {/* CTA Buttons */}
               <Space size="large" wrap>
+                <Link to="/generator">
                 <Button
                   type="primary"
                   size="large"
@@ -142,6 +144,7 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
                 >
                   Start Creating
                 </Button>
+                </Link>
                 <Button
                   size="large"
                   style={{
