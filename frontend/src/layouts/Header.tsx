@@ -72,6 +72,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
     },
   ];
 
+
   // Extract user display name - fallback to email or "User"
   const getUserDisplayName = () => {
     if (user?.firstName && user?.lastName) {
@@ -251,7 +252,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                     }}
                   />
                   <span style={{ color: "#1e293b", fontWeight: 600 }}>
-                    {getUserDisplayName()}
+                    {user?.email || "User"}
                   </span>
                 </div>
               </Dropdown>
