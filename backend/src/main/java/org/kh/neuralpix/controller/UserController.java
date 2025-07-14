@@ -1,15 +1,22 @@
 package org.kh.neuralpix.controller;
 
+import jakarta.validation.Valid;
+import org.kh.neuralpix.dto.users.PagedUserResponse;
+import org.kh.neuralpix.dto.users.UserCreateRequestDto;
+import org.kh.neuralpix.dto.users.UserUpdateRequestDto;
 import org.kh.neuralpix.model.User;
 import org.kh.neuralpix.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/v1/users")
 public class UserController {
 
     private final UserService userService;
@@ -20,8 +27,23 @@ public class UserController {
     }
 
     @GetMapping
-    public ResponseEntity<List<User>> getAllUsers() {
-        return ResponseEntity.ok(userService.findAll());
+    public ResponseEntity<PagedUserResponse> getAllUsers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String role,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String plan
+    ) {
+        PageRequest pageable = PageRequest.of(page, size);
+        Page<User> userPage = userService.findUsersWithFilters(search, role, status, plan, pageable);
+        PagedUserResponse response = PagedUserResponse.builder()
+                .users(userPage.getContent())
+                .total(userPage.getTotalElements())
+                .page(userPage.getNumber())
+                .size(userPage.getSize())
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -46,20 +68,17 @@ public class UserController {
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@RequestBody User user) {
-        if (userService.existsByUsername(user.getUsername())) {
+    public ResponseEntity<User> createUser(@Valid @RequestBody UserCreateRequestDto userCreateRequestDto) {
+        if (userService.existsByEmail(userCreateRequestDto.getEmail())) {
             return ResponseEntity.badRequest().build();
         }
-        if (userService.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest().build();
-        }
-        return ResponseEntity.ok(userService.save(user));
+        return ResponseEntity.ok(userService.create(userCreateRequestDto));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto) {
         try {
-            return ResponseEntity.ok(userService.update(id, user));
+            return ResponseEntity.ok(userService.update(id, userUpdateRequestDto));
         } catch (RuntimeException e) {
             return ResponseEntity.notFound().build();
         }

@@ -4,7 +4,6 @@ import { QuestionCircleOutlined, RightOutlined } from "@ant-design/icons";
 
 import { HeroSection } from "../components/HeroSection";
 import { FeaturesSection } from "../components/FeaturesSection";
-import { ImageGenerator } from "../components/ImageGenerator";
 
 const { Title, Paragraph, Text } = Typography;
 

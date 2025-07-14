@@ -5,6 +5,7 @@ import {
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -49,6 +50,17 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       label: "Settings",
       onClick: () => navigate("/profile?tab=settings"),
     },
+    ...(user?.role === "ADMIN" || user?.role === "admin" ? [
+      {
+        type: "divider" as const,
+      },
+      {
+        key: "admin",
+        icon: <DashboardOutlined />,
+        label: "Admin Dashboard",
+        onClick: () => navigate("/admin/dashboard"),
+      },
+    ] : []),
     {
       type: "divider" as const,
     },
@@ -69,7 +81,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       return user.username;
     }
     if (user?.email) {
-      return user.email.split('@')[0];
+      return user.email; // Show full email instead of just username part
     }
     return "User";
   };
@@ -117,7 +129,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         >
           <div style={{ display: "flex", alignItems: "center" }}>
             <Link
-              to="/dashboard"
+              to="/"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -215,7 +227,6 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                     borderRadius: 20,
                     transition: "all 0.3s ease",
                     marginRight: 8,
-                    border: "1px solid rgba(0, 121, 255, 0.2)",
                     background: "rgba(0, 121, 255, 0.05)",
                   }}
                   onMouseEnter={(e) => {

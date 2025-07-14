@@ -28,8 +28,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (accessToken) {
-      // Optionally decode token to get user info
-      // For now, we'll set a placeholder user until we implement JWT decoding
       const storedUser = localStorage.getItem("user");
       if (storedUser) {
         setUser(JSON.parse(storedUser));
@@ -41,17 +39,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (payload: LoginPayload) => {
     const data: LoginResponse = await loginApi(payload);
-    if (data.token) {
-      setAccessToken(data.token);
-      localStorage.setItem("accessToken", data.token);
+    if (data.accessToken) {
+      setAccessToken(data.accessToken);
+      localStorage.setItem("accessToken", data.accessToken);
     }
     if (data.refreshToken) {
       setRefreshToken(data.refreshToken);
       localStorage.setItem("refreshToken", data.refreshToken);
     }
+    
+    // Handle user data - either from nested user object or directly from response
     if (data.user) {
       setUser(data.user);
       localStorage.setItem("user", JSON.stringify(data.user));
+    } else if (data.email) {
+      const userData: User = {
+        email: data.email,
+        ...(data.role && { role: data.role })
+      };
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
     }
   };
 
