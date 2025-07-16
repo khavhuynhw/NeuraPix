@@ -50,17 +50,19 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       label: "Settings",
       onClick: () => navigate("/profile?tab=settings"),
     },
-    ...(user?.role === "ADMIN" || user?.role === "admin" ? [
-      {
-        type: "divider" as const,
-      },
-      {
-        key: "admin",
-        icon: <DashboardOutlined />,
-        label: "Admin Dashboard",
-        onClick: () => navigate("/admin/dashboard"),
-      },
-    ] : []),
+    ...(user?.role === "ADMIN" || user?.role === "admin"
+      ? [
+          {
+            type: "divider" as const,
+          },
+          {
+            key: "admin",
+            icon: <DashboardOutlined />,
+            label: "Admin Dashboard",
+            onClick: () => navigate("/admin/dashboard"),
+          },
+        ]
+      : []),
     {
       type: "divider" as const,
     },
@@ -94,11 +96,23 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
     // Generate a colorful avatar based on user name
     const name = getUserDisplayName();
     const colors = [
-      "#0079FF", "#00C7FF", "#FF6B6B", "#4ECDC4", "#45B7D1", 
-      "#96CEB4", "#FFEAA7", "#DDA0DD", "#98D8C8", "#F7DC6F"
+      "#0079FF",
+      "#00C7FF",
+      "#FF6B6B",
+      "#4ECDC4",
+      "#45B7D1",
+      "#96CEB4",
+      "#FFEAA7",
+      "#DDA0DD",
+      "#98D8C8",
+      "#F7DC6F",
     ];
-    const colorIndex = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
-    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
+    const colorIndex =
+      name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
+      colors.length;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name
+    )}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
   };
 
   return (
@@ -230,16 +244,15 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                     background: "rgba(0, 121, 255, 0.05)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(0, 121, 255, 0.1)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 8px 20px rgba(0, 121, 255, 0.2)";
-                  }}
-                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#0079FF";
                     e.currentTarget.style.background =
                       "rgba(0, 121, 255, 0.05)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   <Avatar
