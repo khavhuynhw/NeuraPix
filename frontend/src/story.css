@@ -1,5 +1,15 @@
+html {
+  overflow-x: hidden;
+}
 
-.list-item.TASK_ARCHIVED input[type="text"] {
- color: #4a5568;
-  text-decoration: line-through;
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
