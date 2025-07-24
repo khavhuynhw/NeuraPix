@@ -1,28 +1,56 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ConfigProvider, App as AntdApp, Layout } from "antd";
+import { ConfigProvider, App as AntdApp, Layout, Spin } from "antd";
+import { Suspense, lazy } from "react";
 import { Header } from "./layouts/Header";
 import { Footer } from "./layouts/Footer";
+import { AuthProvider } from "./context/AuthContext";
+
+// Immediately loaded components (critical for initial render)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { UserProfilePage } from "./pages/UserProfilePage";
-import { BillingPage } from "./pages/BillingPage";
-import { GeneratorPage } from "./pages/GeneratorPage";
-import FeaturesPage from "./pages/FeaturesPage";
-import PricingPage from "./pages/PricingPage";
-import { AuthProvider } from "./context/AuthContext";
-import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
-import AdminLayout from "./layouts/AdminLayout";
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import UserManagement from "./pages/admin/UserManagement";
-import ContentManagement from "./pages/admin/ContentManagement";
-import AdminAnalytics from "./pages/admin/AdminAnalytics";
-import AdminSettings from "./pages/admin/AdminSettings";
-import { ChatPage } from "./pages/ChatPage";
+
+// Lazy loaded pages for better performance
+const LoginPage = lazy(() => import("./pages/LoginPage").then(module => ({ default: module.LoginPage })));
+const RegisterPage = lazy(() => import("./pages/RegisterPage").then(module => ({ default: module.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage").then(module => ({ default: module.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage").then(module => ({ default: module.ResetPasswordPage })));
+const UserProfilePage = lazy(() => import("./pages/UserProfilePage").then(module => ({ default: module.UserProfilePage })));
+const BillingPage = lazy(() => import("./pages/BillingPage").then(module => ({ default: module.BillingPage })));
+const GeneratorPage = lazy(() => import("./pages/GeneratorPage").then(module => ({ default: module.GeneratorPage })));
+const FeaturesPage = lazy(() => import("./pages/FeaturesPage"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage").then(module => ({ default: module.ChatPage })));
+
+// Admin components (lazy loaded as a separate chunk)
+const ProtectedAdminRoute = lazy(() => import("./components/ProtectedAdminRoute"));
+const AdminLayout = lazy(() => import("./layouts/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const UserManagement = lazy(() => import("./pages/admin/UserManagement"));
+const ContentManagement = lazy(() => import("./pages/admin/ContentManagement"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
+
 const { Content } = Layout;
+
+// Loading component with better UX
+const PageLoader = () => (
+  <div style={{ 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    minHeight: '50vh',
+    background: 'transparent'
+  }}>
+    <Spin size="large" tip="Loading..." />
+  </div>
+);
+
+// Suspense wrapper component for better error boundaries
+const SuspenseWrapper = ({ children }: { children: React.ReactNode }) => (
+  <Suspense fallback={<PageLoader />}>
+    {children}
+  </Suspense>
+);
 
 const App = () => (
   <ConfigProvider
@@ -38,24 +66,29 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            {/* Admin Routes */}
+            {/* Admin Routes - Lazy loaded */}
             <Route
               path="/admin/*"
               element={
-                <ProtectedAdminRoute>
-                  <AdminLayout />
-                </ProtectedAdminRoute>
+                <SuspenseWrapper>
+                  <ProtectedAdminRoute>
+                    <AdminLayout />
+                  </ProtectedAdminRoute>
+                </SuspenseWrapper>
               }
             >
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="users" element={<UserManagement />} />
-              <Route path="content" element={<ContentManagement />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="billing" element={<BillingPage />} />
-              <Route path="settings" element={<AdminSettings />} />
+              <Route index element={<SuspenseWrapper><AdminDashboard /></SuspenseWrapper>} />
+              <Route path="dashboard" element={<SuspenseWrapper><AdminDashboard /></SuspenseWrapper>} />
+              <Route path="users" element={<SuspenseWrapper><UserManagement /></SuspenseWrapper>} />
+              <Route path="content" element={<SuspenseWrapper><ContentManagement /></SuspenseWrapper>} />
+              <Route path="analytics" element={<SuspenseWrapper><AdminAnalytics /></SuspenseWrapper>} />
+              <Route path="billing" element={<SuspenseWrapper><BillingPage /></SuspenseWrapper>} />
+              <Route path="settings" element={<SuspenseWrapper><AdminSettings /></SuspenseWrapper>} />
             </Route>
-            <Route path="/chat" element={<ChatPage />} />
+            
+            {/* Chat Page - Lazy loaded */}
+            <Route path="/chat" element={<SuspenseWrapper><ChatPage /></SuspenseWrapper>} />
+            
             {/* Regular Routes */}
             <Route
               path="/*"
@@ -79,23 +112,24 @@ const App = () => (
                     }}
                   >
                     <Routes>
+                      {/* Critical pages - loaded immediately */}
                       <Route path="/" element={<Index />} />
-                      <Route path="/login" element={<LoginPage />} />
-                      <Route path="/register" element={<RegisterPage />} />
-                      <Route
-                        path="/forgot-password"
-                        element={<ForgotPasswordPage />}
-                      />
-                      <Route
-                        path="/reset-password"
-                        element={<ResetPasswordPage />}
-                      />
-                      <Route path="/profile" element={<UserProfilePage />} />
-                      <Route path="/billing" element={<BillingPage />} />
-                      <Route path="/features" element={<FeaturesPage />} />
-                      <Route path="/pricing" element={<PricingPage />} />
-                      <Route path="/generator" element={<GeneratorPage />} />
                       <Route path="*" element={<NotFound />} />
+                      
+                      {/* Auth pages - lazy loaded */}
+                      <Route path="/login" element={<SuspenseWrapper><LoginPage /></SuspenseWrapper>} />
+                      <Route path="/register" element={<SuspenseWrapper><RegisterPage /></SuspenseWrapper>} />
+                      <Route path="/forgot-password" element={<SuspenseWrapper><ForgotPasswordPage /></SuspenseWrapper>} />
+                      <Route path="/reset-password" element={<SuspenseWrapper><ResetPasswordPage /></SuspenseWrapper>} />
+                      
+                      {/* User pages - lazy loaded */}
+                      <Route path="/profile" element={<SuspenseWrapper><UserProfilePage /></SuspenseWrapper>} />
+                      <Route path="/billing" element={<SuspenseWrapper><BillingPage /></SuspenseWrapper>} />
+                      
+                      {/* Feature pages - lazy loaded */}
+                      <Route path="/features" element={<SuspenseWrapper><FeaturesPage /></SuspenseWrapper>} />
+                      <Route path="/pricing" element={<SuspenseWrapper><PricingPage /></SuspenseWrapper>} />
+                      <Route path="/generator" element={<SuspenseWrapper><GeneratorPage /></SuspenseWrapper>} />
                     </Routes>
                   </Content>
                   <Footer />
