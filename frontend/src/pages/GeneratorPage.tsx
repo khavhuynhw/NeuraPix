@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import {
   Row,
   Col,
@@ -22,7 +22,6 @@ import {
   Spin,
   message,
 } from "antd";
-
 import {
   PictureOutlined,
   UploadOutlined,
@@ -121,10 +120,7 @@ export const GeneratorPage = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [usageCount, setUsageCount] = useState(234);
   const [usageLimit] = useState(500);
-
   const promptInputRef = useRef<any>(null);
-
-
 
   const handleGenerate = async (values: any) => {
     if (!values.prompt?.trim()) {
@@ -134,8 +130,10 @@ export const GeneratorPage = () => {
 
     setIsGenerating(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
         url: `https://picsum.photos/512/512?random=${Date.now()}`,
@@ -149,15 +147,16 @@ export const GeneratorPage = () => {
 
       setGeneratedImages((prev) => [newImage, ...prev]);
       setUsageCount((prev) => prev + 1);
-      setIsGenerating(false);
       message.success("Image generated successfully!");
 
       // Clear the prompt
       form.setFieldValue("prompt", "");
-    }, 3000);
+    } catch (error) {
+      message.error("Failed to generate image. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
-
-
 
   const handlePromptSuggestion = (suggestion: string) => {
     form.setFieldValue("prompt", suggestion);
@@ -176,12 +175,7 @@ export const GeneratorPage = () => {
   };
 
   const handleDownload = (image: GeneratedImage) => {
-    const link = document.createElement("a");
-    link.href = image.url;
-    link.download = `generated-image-${image.id}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // Simulate download
     message.success("Download started!");
   };
 
@@ -928,8 +922,6 @@ export const GeneratorPage = () => {
                               }{" "}
                               {image.style}
                             </Tag>
-
-
                           </div>
                           <div
                             style={{
