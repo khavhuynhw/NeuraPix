@@ -5,7 +5,9 @@ import {
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
+import { useAuth } from "../context/AuthContext";
 
 const { Header: AntHeader } = Layout;
 
@@ -15,9 +17,7 @@ interface HeaderProps {
 
 export const Header = ({ onGetStarted }: HeaderProps) => {
   const navigate = useNavigate();
-
-  // Mock auth state - in real app this would come from auth context
-  const isLoggedIn = false; // Change to true to see profile dropdown
+  const { user, isAuthenticated, logout } = useAuth();
 
   const handleGetStarted = () => {
     if (onGetStarted) {
@@ -30,6 +30,11 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         block: "start",
       });
     }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   const userMenuItems = [
@@ -45,6 +50,19 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       label: "Settings",
       onClick: () => navigate("/profile?tab=settings"),
     },
+    ...(user?.role === "ADMIN" || user?.role === "admin"
+      ? [
+          {
+            type: "divider" as const,
+          },
+          {
+            key: "admin",
+            icon: <DashboardOutlined />,
+            label: "Admin Dashboard",
+            onClick: () => navigate("/admin/dashboard"),
+          },
+        ]
+      : []),
     {
       type: "divider" as const,
     },
@@ -52,12 +70,51 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Logout",
-      onClick: () => {
-        // Handle logout logic
-        console.log("Logging out...");
-      },
+      onClick: handleLogout,
     },
   ];
+
+
+  // Extract user display name - fallback to email or "User"
+  const getUserDisplayName = () => {
+    if (user?.firstName && user?.lastName) {
+      return `${user.firstName} ${user.lastName}`;
+    }
+    if (user?.username) {
+      return user.username;
+    }
+    if (user?.email) {
+      return user.email; // Show full email instead of just username part
+    }
+    return "User";
+  };
+
+  // Generate avatar from user info
+  const getUserAvatar = () => {
+    if (user?.avatar) {
+      return user.avatar;
+    }
+    // Generate a colorful avatar based on user name
+    const name = getUserDisplayName();
+    const colors = [
+      "#0079FF",
+      "#00C7FF",
+      "#FF6B6B",
+      "#4ECDC4",
+      "#45B7D1",
+      "#96CEB4",
+      "#FFEAA7",
+      "#DDA0DD",
+      "#98D8C8",
+      "#F7DC6F",
+    ];
+    const colorIndex =
+      name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0) %
+      colors.length;
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(
+      name
+    )}&background=${colors[colorIndex].slice(1)}&color=fff&size=32`;
+  };
 
   return (
     <AntHeader
@@ -87,7 +144,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
         >
           <div style={{ display: "flex", alignItems: "center" }}>
             <Link
-              to="/dashboard"
+              to="/"
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -144,32 +201,6 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
             >
               Features
             </a>
-            <Button
-              type="link"
-              onClick={() => navigate("/generator")}
-              style={{
-                color: "#64748b",
-                fontSize: 16,
-                fontWeight: 500,
-                padding: "8px 16px",
-                height: "auto",
-                borderRadius: 20,
-                transition: "all 0.3s ease",
-                position: "relative",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.color = "#0079FF";
-                e.currentTarget.style.background = "rgba(0, 121, 255, 0.05)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.color = "#64748b";
-                e.currentTarget.style.background = "transparent";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Generator
-            </Button>
             <Link
               to="/pricing"
               style={{
@@ -195,7 +226,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
             >
               Pricing
             </Link>
-            {isLoggedIn ? (
+            {isAuthenticated ? (
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"
@@ -211,32 +242,30 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                     borderRadius: 20,
                     transition: "all 0.3s ease",
                     marginRight: 8,
-                    border: "1px solid rgba(0, 121, 255, 0.2)",
                     background: "rgba(0, 121, 255, 0.05)",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(0, 121, 255, 0.1)";
-                    e.currentTarget.style.transform = "translateY(-2px)";
-                    e.currentTarget.style.boxShadow =
-                      "0 8px 20px rgba(0, 121, 255, 0.2)";
-                  }}
-                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#0079FF";
                     e.currentTarget.style.background =
                       "rgba(0, 121, 255, 0.05)";
+                    e.currentTarget.style.transform = "translateY(-2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#64748b";
+                    e.currentTarget.style.background = "transparent";
                     e.currentTarget.style.transform = "translateY(0)";
-                    e.currentTarget.style.boxShadow = "none";
                   }}
                 >
                   <Avatar
                     size={32}
-                    src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=32&h=32&fit=crop&crop=face"
+                    src={getUserAvatar()}
                     style={{
                       border: "2px solid #0079FF",
                       boxShadow: "0 2px 8px rgba(0, 121, 255, 0.3)",
                     }}
                   />
                   <span style={{ color: "#1e293b", fontWeight: 600 }}>
-                    Alex
+                    {user?.email || "User"}
                   </span>
                 </div>
               </Dropdown>
@@ -285,7 +314,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
                 Sign In
               </Button>
             )}
-            <Button
+            {/* <Button
               type="primary"
               onClick={handleGetStarted}
               style={{
@@ -328,7 +357,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
               }}
             >
               ✨ Get Started
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

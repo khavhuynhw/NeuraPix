@@ -2,13 +2,9 @@ import axios from "axios";
 import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
 
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
 
-/**
- * Authenticates a user and returns a JWT token.
- * @param {LoginPayload} payload - The login credentials.
- * @returns {Promise<LoginResponse>} - The response containing the JWT token or error message.
- */
+
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const response = await axios.post(
@@ -21,9 +17,8 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
       }
     );
 
-    // Save JWT token to localStorage if present
-    if (response.data.token) {
-      localStorage.setItem("jwt_token", response.data.token);
+    if (response.data.accessToken) {
+      localStorage.setItem("accessToken", response.data.accessToken);
     }
 
     return response.data;

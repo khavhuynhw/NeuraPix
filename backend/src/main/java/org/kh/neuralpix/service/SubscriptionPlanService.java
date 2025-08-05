@@ -3,7 +3,7 @@ package org.kh.neuralpix.service;
 import org.kh.neuralpix.dto.SubscriptionPlanDto;
 import org.kh.neuralpix.dto.request.SubscriptionPlanRequestDto;
 import org.kh.neuralpix.model.SubscriptionPlan;
-import org.kh.neuralpix.model.SubscriptionTier;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 
 import java.util.List;
 import java.util.Optional;

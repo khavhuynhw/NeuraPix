@@ -1,0 +1,43 @@
+package org.kh.neuralpix.dto.users;
+
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
+import org.kh.neuralpix.model.enums.UserRole;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class UserUpdateRequestDto {
+
+    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    private String username;
+
+    @Email(message = "Email should be valid")
+    private String email;
+
+    @Size(min = 6, message = "Password must be at least 6 characters")
+    private String password;
+
+    private UserRole role;
+
+    @Size(max = 100, message = "First name must not exceed 100 characters")
+    private String firstName;
+
+    @Size(max = 100, message = "Last name must not exceed 100 characters")
+    private String lastName;
+
+    @Size(max = 500, message = "Avatar URL must not exceed 500 characters")
+    private String avatarUrl;
+
+    private Integer credits;
+
+    private SubscriptionTier subscriptionTier;
+
+    private Boolean isActive;
+
+    private Boolean emailVerified;
+}

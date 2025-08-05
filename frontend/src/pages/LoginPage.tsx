@@ -24,12 +24,12 @@ export const LoginPage = () => {
         email: values.email,
         password: values.password,
       });
-      navigate("/dashboard"); // Redirect on success
+      navigate("/"); // Redirect on success
     } catch (error: any) {
       form.setFields([
         {
           name: "email",
-          errors: [error.message || "Login failed"],
+          errors: [error.message || "Invalid email or password"],
         },
       ]);
     }

@@ -1,10 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { login as loginApi, register as registerApi, resetPw as resetPwApi, confirmResetPw as confirmResetPwApi } from "../services/authApi";
-import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
+import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 interface AuthContextType {
-  user: any;
+  user: User | null;
   isAuthenticated: boolean;
   login: (payload: LoginPayload) => Promise<void>;
   logout: () => void;
@@ -18,7 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(
     localStorage.getItem("accessToken")
   );
@@ -28,8 +28,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (accessToken) {
-      // Optionally decode token to get user info
-      setUser({}); // Set user info here if you decode JWT
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
+      }
     } else {
       setUser(null);
     }
@@ -37,16 +39,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = async (payload: LoginPayload) => {
     const data: LoginResponse = await loginApi(payload);
-    if (data.token) {
-      setAccessToken(data.token);
-      localStorage.setItem("accessToken", data.token);
+    if (data.accessToken) {
+      setAccessToken(data.accessToken);
+      localStorage.setItem("accessToken", data.accessToken);
     }
     if (data.refreshToken) {
       setRefreshToken(data.refreshToken);
       localStorage.setItem("refreshToken", data.refreshToken);
     }
-    // Optionally decode token to set user info
-    setUser({}); // Set user info here if you decode JWT
+    
+    // Handle user data - either from nested user object or directly from response
+    if (data.user) {
+      setUser(data.user);
+      localStorage.setItem("user", JSON.stringify(data.user));
+    } else if (data.email) {
+      const userData: User = {
+        email: data.email,
+        ...(data.role && { role: data.role })
+      };
+      setUser(userData);
+      localStorage.setItem("user", JSON.stringify(userData));
+    }
   };
 
   const logout = () => {
@@ -55,6 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     localStorage.removeItem("accessToken");
     localStorage.removeItem("refreshToken");
+    localStorage.removeItem("user");
   };
 
   const register = async (payload: RegisterPayload) => {

@@ -1,11 +1,10 @@
 package org.kh.neuralpix.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import org.kh.neuralpix.dto.auth.*;
 import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.model.PasswordResetToken;
 import org.kh.neuralpix.model.User;
-import org.kh.neuralpix.model.UserRole;
+import org.kh.neuralpix.model.enums.UserRole;
 import org.kh.neuralpix.repository.PasswordResetTokenRepository;
 import org.kh.neuralpix.repository.UserRepository;
 import org.kh.neuralpix.security.JwtTokenProvider;
@@ -81,9 +80,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void register(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Username is already taken");
-        }
 
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email is already registered");

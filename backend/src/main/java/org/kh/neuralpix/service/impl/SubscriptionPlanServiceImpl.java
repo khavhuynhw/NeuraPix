@@ -1,11 +1,10 @@
 package org.kh.neuralpix.service.impl;
 
-import lombok.RequiredArgsConstructor;
 import org.kh.neuralpix.dto.SubscriptionPlanDto;
 import org.kh.neuralpix.dto.request.SubscriptionPlanRequestDto;
 import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.model.SubscriptionPlan;
-import org.kh.neuralpix.model.SubscriptionTier;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 import org.kh.neuralpix.repository.SubscriptionPlanRepository;
 import org.kh.neuralpix.service.SubscriptionPlanService;
 import org.kh.neuralpix.utils.EntityMerge;
@@ -86,12 +85,12 @@ public class SubscriptionPlanServiceImpl implements SubscriptionPlanService {
             throw new ResourceNotFoundException("SubscriptionPlan", "id", id.toString());
         }
         SubscriptionPlan plan = planRepository.findById(id).get();
-        plan.setIsActive(SubscriptionPlan.IsActive.TRUE);
+        plan.setIsActive(SubscriptionPlan.IsActive.FALSE);
         planRepository.save(plan);
     }
 
     @Override
     public List<SubscriptionPlan> getActivePlans() {
-        return planRepository.findByIsActiveTrue();
+        return planRepository.findByIsActive(SubscriptionPlan.IsActive.TRUE);
     }
 }

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.kh.neuralpix.model.enums.SubscriptionTier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

@@ -4,7 +4,6 @@ import { QuestionCircleOutlined, RightOutlined } from "@ant-design/icons";
 
 import { HeroSection } from "../components/HeroSection";
 import { FeaturesSection } from "../components/FeaturesSection";
-import { ImageGenerator } from "../components/ImageGenerator";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -146,39 +145,7 @@ const Index = () => {
       <div id="features">
         <FeaturesSection />
       </div>
-
-      {/* Image Generator */}
-      <div
-        id="generator"
-        ref={generatorRef}
-        style={{
-          padding: "80px 24px",
-          backgroundColor: "#f8fafc",
-          width: "100vw",
-        }}
-      >
-        <div style={{ textAlign: "center", marginBottom: 48 }}>
-          <Title
-            level={2}
-            style={{ fontSize: "clamp(2rem, 5vw, 2.5rem)", marginBottom: 16 }}
-          >
-            Start Creating Now
-          </Title>
-          <Paragraph
-            style={{
-              fontSize: 20,
-              color: "#64748b",
-              maxWidth: 600,
-              margin: "0 auto",
-            }}
-          >
-            Transform your ideas into stunning visuals with our powerful AI
-            image generator
-          </Paragraph>
-        </div>
-        <ImageGenerator />
-      </div>
-
+      
       {/* Testimonials */}
       <div
         style={{
