@@ -1,6 +1,9 @@
 package org.kh.neuralpix.service.impl;
 
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kh.neuralpix.model.Transaction;
+import org.kh.neuralpix.service.TransactionService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.kh.neuralpix.service.PayOSPaymentService;
@@ -18,7 +21,10 @@ import java.util.Collections;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class PayOSPaymentServiceImpl implements PayOSPaymentService {
+
+    private final TransactionService transactionService;
 
     @Value("${payos.client-id}")
     private String clientId;
@@ -44,9 +50,23 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     }
 
     @Override
-    public CheckoutResponseData createPaymentLink(Long orderCode, BigDecimal amount, String description, String buyerEmail, String buyerName) {
+    public CheckoutResponseData createPaymentLink(Long orderCode, BigDecimal amount, String description, String buyerEmail) {
+        return createPaymentLinkWithTransaction(orderCode, null, null, amount, Transaction.TransactionType.ONE_TIME_PAYMENT, description, buyerEmail);
+    }
+
+    /**
+     * Tạo payment link và lưu transaction
+     */
+    public CheckoutResponseData createPaymentLinkWithTransaction(Long orderCode, Long userId, Long subscriptionId, 
+                                                               BigDecimal amount, Transaction.TransactionType type, 
+                                                               String description, String buyerEmail) {
         try {
             log.info("Creating payment link for order: {} with amount: {}", orderCode, amount);
+            
+            // Kiểm tra orderCode đã tồn tại chưa
+            if (transactionService.existsByOrderCode(orderCode)) {
+                throw new RuntimeException("Order code already exists: " + orderCode);
+            }
             
             PaymentData.PaymentDataBuilder paymentDataBuilder = PaymentData.builder()
                     .orderCode(orderCode)
@@ -59,9 +79,7 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             if (buyerEmail != null && !buyerEmail.isEmpty()) {
                 paymentDataBuilder.buyerEmail(buyerEmail);
             }
-            if (buyerName != null && !buyerName.isEmpty()) {
-                paymentDataBuilder.buyerName(buyerName);
-            }
+
 
             // Add default item
             ItemData item = ItemData.builder()
@@ -75,6 +93,20 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             PaymentData paymentData = paymentDataBuilder.build();
             
             CheckoutResponseData response = payOS.createPaymentLink(paymentData);
+
+            if (userId != null) {
+                transactionService.createPayOSTransaction(
+                    orderCode, 
+                    userId, 
+                    subscriptionId, 
+                    amount, 
+                    type, 
+                    description, 
+                    buyerEmail
+                );
+                log.info("Transaction saved for order: {}", orderCode);
+            }
+            
             log.info("Payment link created successfully for order: {}", orderCode);
             return response;
             
@@ -101,7 +133,18 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     public PaymentLinkData cancelPaymentLink(Long orderCode, String reason) {
         try {
             log.info("Cancelling payment link for order: {} with reason: {}", orderCode, reason);
+            
             PaymentLinkData paymentData = payOS.cancelPaymentLink(orderCode, reason);
+            
+            // Cập nhật transaction status
+            try {
+                transactionService.markTransactionAsCancelled(orderCode);
+                log.info("Transaction marked as cancelled for order: {}", orderCode);
+            } catch (Exception e) {
+                log.warn("Failed to update transaction status for order: {}", orderCode, e);
+                // Không throw exception vì PayOS đã cancel thành công
+            }
+            
             log.info("Payment link cancelled for order: {}", orderCode);
             return paymentData;
         } catch (Exception e) {

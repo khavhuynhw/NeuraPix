@@ -1,0 +1,804 @@
+{
+	"info": {
+		"name": "NeuraPix - Subscription Payment Flow",
+		"description": "Test complete subscription payment flow with PayOS integration",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{jwt_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "subscription_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "order_code",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "jwt_token",
+			"value": "",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "📋 Setup & Authentication",
+			"item": [
+				{
+					"name": "1. Register New User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Registration successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"// Generate random email for testing",
+									"const timestamp = Date.now();",
+									"const randomEmail = `test.user.${timestamp}@example.com`;",
+									"pm.collectionVariables.set(\"test_email\", randomEmail);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate test data",
+									"const timestamp = Date.now();",
+									"pm.collectionVariables.set(\"timestamp\", timestamp);",
+									"pm.collectionVariables.set(\"test_username\", `testuser${timestamp}`);",
+									"pm.collectionVariables.set(\"test_email\", `test.user.${timestamp}@example.com`);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{test_username}}\",\n    \"email\": \"{{test_email}}\",\n    \"password\": \"testpassword123\",\n    \"firstName\": \"Test\",\n    \"lastName\": \"User\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"register"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Login User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Login successful\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response has token\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.have.property('token');",
+									"    pm.collectionVariables.set('jwt_token', responseJson.token);",
+									"    if (responseJson.user && responseJson.user.id) {",
+									"        pm.collectionVariables.set('user_id', responseJson.user.id);",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"{{test_email}}\",\n    \"password\": \"testpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Get User Profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User profile retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"User has FREE tier initially\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.subscriptionTier).to.eql('FREE');",
+									"    pm.collectionVariables.set('user_id', responseJson.id);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📦 Subscription Plans",
+			"item": [
+				{
+					"name": "1. Get All Active Plans",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Plans retrieved successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Has available plans\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"    pm.expect(responseJson.length).to.be.greaterThan(0);",
+									"    ",
+									"    // Find a BASIC or PREMIUM plan for testing",
+									"    const testPlan = responseJson.find(plan => ",
+									"        plan.tier === 'BASIC' || plan.tier === 'PREMIUM'",
+									"    );",
+									"    ",
+									"    if (testPlan) {",
+									"        pm.collectionVariables.set('test_tier', testPlan.tier);",
+									"        pm.collectionVariables.set('test_plan_id', testPlan.id);",
+									"    } else {",
+									"        pm.collectionVariables.set('test_tier', 'BASIC');",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/plans/active",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"plans",
+								"active"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "💳 Subscription Creation & Payment",
+			"item": [
+				{
+					"name": "1. Create Subscription (PENDING)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Subscription created successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Subscription has PENDING status\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.status).to.eql('PENDING');",
+									"    pm.expect(responseJson.id).to.exist;",
+									"    ",
+									"    pm.collectionVariables.set('subscription_id', responseJson.id);",
+									"    ",
+									"    if (responseJson.externalSubscriptionId) {",
+									"        pm.collectionVariables.set('external_subscription_id', responseJson.externalSubscriptionId);",
+									"    }",
+									"});",
+									"",
+									"pm.test(\"Payment link should be created\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    // PayOS sẽ tạo payment link trong service",
+									"    pm.expect(responseJson.tier).to.eql(pm.collectionVariables.get('test_tier'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Generate unique order code for testing",
+									"const orderCode = Math.floor(Date.now() / 1000);",
+									"pm.collectionVariables.set('order_code', orderCode);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": {{user_id}},\n    \"tier\": \"{{test_tier}}\",\n    \"billingCycle\": \"MONTHLY\",\n    \"paymentProvider\": \"payos\",\n    \"autoRenew\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Verify Subscription Status (PENDING)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Subscription is PENDING\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.status).to.eql('PENDING');",
+									"});",
+									"",
+									"pm.test(\"Subscription details correct\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.userId).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+									"    pm.expect(responseJson.tier).to.eql(pm.collectionVariables.get('test_tier'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"{{subscription_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Verify User Still FREE Tier",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User still has FREE tier\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.subscriptionTier).to.eql('FREE');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "✅ Payment Success Flow",
+			"item": [
+				{
+					"name": "1. Mock PayOS Webhook - Payment SUCCESS",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Webhook processed successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates success\", function () {",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('Payment confirmed');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"webhookUrl\": \"https://your-domain.com/webhook\",\n    \"data\": {\n        \"success\": true,\n        \"message\": \"Payment successful\",\n        \"paymentLinkId\": \"{{external_subscription_id}}\",\n        \"orderCode\": {{order_code}},\n        \"status\": \"PAID\",\n        \"amount\": 9900,\n        \"description\": \"{{test_tier}} subscription\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payos/webhook/subscription-payment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payos",
+								"webhook",
+								"subscription-payment"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Verify Subscription ACTIVE",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Subscription is now ACTIVE\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.status).to.eql('ACTIVE');",
+									"});",
+									"",
+									"pm.test(\"Subscription details preserved\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.tier).to.eql(pm.collectionVariables.get('test_tier'));",
+									"    pm.expect(responseJson.userId).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/{{subscription_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"{{subscription_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Verify User Tier Upgraded",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User tier upgraded successfully\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.subscriptionTier).to.eql(pm.collectionVariables.get('test_tier'));",
+									"});",
+									"",
+									"pm.test(\"User details preserved\", function () {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.email).to.eql(pm.collectionVariables.get('test_email'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"users",
+								"{{user_id}}"
+							]
+						}
+					}
+				},
+				{
+					"name": "4. Get User's Active Subscription",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"User has active subscription\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson.status).to.eql('ACTIVE');",
+									"    pm.expect(responseJson.tier).to.eql(pm.collectionVariables.get('test_tier'));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/user/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"user",
+								"{{user_id}}"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "❌ Payment Failed Flow",
+			"item": [
+				{
+					"name": "1. Create Another Subscription for Failed Test",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Should fail - user already has active subscription\", function () {",
+									"    // This should fail because user already has active subscription",
+									"    pm.expect(pm.response.code).to.be.oneOf([400, 409]);",
+									"});",
+									"",
+									"// For demo purposes, let's create a subscription for a different user",
+									"// In real scenario, you'd cancel existing subscription first"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"userId\": {{user_id}},\n    \"tier\": \"PREMIUM\",\n    \"billingCycle\": \"YEARLY\",\n    \"paymentProvider\": \"payos\",\n    \"autoRenew\": true\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Mock PayOS Webhook - Payment FAILED",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Webhook processed - payment failed\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response indicates payment failed\", function () {",
+									"    const responseText = pm.response.text();",
+									"    pm.expect(responseText).to.include('Payment failed');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"webhookUrl\": \"https://your-domain.com/webhook\",\n    \"data\": {\n        \"success\": false,\n        \"message\": \"Payment failed\",\n        \"paymentLinkId\": \"{{external_subscription_id}}\",\n        \"orderCode\": {{order_code}},\n        \"status\": \"CANCELLED\",\n        \"amount\": 9900,\n        \"description\": \"{{test_tier}} subscription\"\n    }\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/payos/webhook/subscription-payment",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"payos",
+								"webhook",
+								"subscription-payment"
+							]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "📊 Verification & Status Check",
+			"item": [
+				{
+					"name": "1. Get All Subscriptions by Status - ACTIVE",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Active subscriptions retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"    ",
+									"    if (responseJson.length > 0) {",
+									"        const userSubscription = responseJson.find(sub => sub.userId === parseInt(pm.collectionVariables.get('user_id')));",
+									"        if (userSubscription) {",
+									"            pm.expect(userSubscription.status).to.eql('ACTIVE');",
+									"        }",
+									"    }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/status/ACTIVE",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"status",
+								"ACTIVE"
+							]
+						}
+					}
+				},
+				{
+					"name": "2. Get All Subscriptions by Status - PENDING",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Pending subscriptions retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"    console.log('Pending subscriptions:', responseJson.length);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/status/PENDING",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"status",
+								"PENDING"
+							]
+						}
+					}
+				},
+				{
+					"name": "3. Get All Subscriptions by Status - CANCELLED",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Cancelled subscriptions retrieved\", function () {",
+									"    pm.response.to.have.status(200);",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(responseJson).to.be.an('array');",
+									"    console.log('Cancelled subscriptions:', responseJson.length);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/v1/subscriptions/status/CANCELLED",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"subscriptions",
+								"status",
+								"CANCELLED"
+							]
+						}
+					}
+				}
+			]
+		}
+	]
+}

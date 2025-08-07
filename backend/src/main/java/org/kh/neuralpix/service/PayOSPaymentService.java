@@ -8,7 +8,7 @@ import vn.payos.type.WebhookData;
 import java.math.BigDecimal;
 
 public interface PayOSPaymentService {
-    CheckoutResponseData createPaymentLink(Long orderCode, BigDecimal amount, String description, String buyerEmail, String buyerName);
+    CheckoutResponseData createPaymentLink(Long orderCode, BigDecimal amount, String description, String buyerEmail);
     PaymentLinkData getPaymentLinkInfo(Long orderCode);
     PaymentLinkData cancelPaymentLink(Long orderCode, String reason);
     WebhookData verifyWebhookData(Webhook webhookData);

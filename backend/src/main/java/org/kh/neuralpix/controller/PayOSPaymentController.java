@@ -3,7 +3,10 @@ package org.kh.neuralpix.controller;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.kh.neuralpix.dto.payos.CreatePaymentLinkRequestBody;
+import org.kh.neuralpix.model.Transaction;
 import org.kh.neuralpix.service.PayOSPaymentService;
+import org.kh.neuralpix.service.TransactionService;
+import org.kh.neuralpix.service.impl.PayOSPaymentServiceImpl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import vn.payos.type.CheckoutResponseData;
@@ -23,21 +26,28 @@ import java.util.Map;
 public class PayOSPaymentController {
 
     private final PayOSPaymentService payOSPaymentService;
+    private final PayOSPaymentServiceImpl payOSPaymentServiceImpl;
+    private final TransactionService transactionService;
 
     @PostMapping("/create-payment-link")
     public ResponseEntity<Map<String, Object>> createPaymentLink(@RequestBody CreatePaymentLinkRequestBody request) {
         try {
             log.info("Creating PayOS payment link for: {}", request.getProductName());
-            
-            // Generate order code (you might want to use a proper order management system)
-            Long orderCode = System.currentTimeMillis() / 1000; // Simple timestamp-based order code
-            
-            CheckoutResponseData response = payOSPaymentService.createPaymentLink(
+
+            Long orderCode = System.currentTimeMillis() / 1000;
+
+            Transaction.TransactionType transactionType = request.getSubscriptionId() != null 
+                ? Transaction.TransactionType.SUBSCRIPTION_PAYMENT 
+                : Transaction.TransactionType.ONE_TIME_PAYMENT;
+
+            CheckoutResponseData response = payOSPaymentServiceImpl.createPaymentLinkWithTransaction(
                     orderCode,
+                    request.getUserId(),
+                    request.getSubscriptionId(),
                     BigDecimal.valueOf(request.getPrice()),
-                    request.getDescription(),
-                    null, // buyerEmail - can be added to request if needed
-                    request.getBuyerName()
+                    transactionType,
+                    request.getDescription() != null ? request.getDescription() : request.getProductName(),
+                    request.getBuyerEmail()
             );
 
             Map<String, Object> result = new HashMap<>();
