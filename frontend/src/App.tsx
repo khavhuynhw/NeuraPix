@@ -10,6 +10,7 @@ import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { BillingPage } from "./pages/BillingPage";
 import { GeneratorPage } from "./pages/GeneratorPage";
+
 import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
 import { AuthProvider } from "./context/AuthContext";
@@ -95,6 +96,7 @@ const App = () => (
                       <Route path="/features" element={<FeaturesPage />} />
                       <Route path="/pricing" element={<PricingPage />} />
                       <Route path="/generator" element={<GeneratorPage />} />
+
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </Content>
