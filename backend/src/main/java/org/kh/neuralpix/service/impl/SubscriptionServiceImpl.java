@@ -89,17 +89,15 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         // Create PayOS payment link if PayOS is the payment provider
         String paymentLinkId = null;
-        String checkoutUrl = null;
         if ("payos".equalsIgnoreCase(request.getPaymentProvider())) {
             try {
                 Long orderCode = System.currentTimeMillis() / 1000;
-                String description = "Subscription to " + request.getTier() + " plan - " + request.getBillingCycle();
+                String description =  request.getTier();
                 
                 vn.payos.type.CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
-                        orderCode, price, description, user.getEmail(), user.getUsername());
+                        orderCode, price, description, user.getEmail());
                 
                 paymentLinkId = paymentResponse.getPaymentLinkId();
-                checkoutUrl = paymentResponse.getCheckoutUrl();
                 
                 log.info("PayOS payment link created for subscription: {}", paymentLinkId);
             } catch (Exception e) {
@@ -108,10 +106,10 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             }
         }
 
-        Subscription subscription = new Subscription().builder()
+        Subscription subscription = Subscription.builder()
                 .user(user)
                 .userId(request.getUserId())
-                .status(Subscription.SubscriptionStatus.ACTIVE)
+                .status(Subscription.SubscriptionStatus.PENDING)  // ✅ Status PENDING cho đến khi payment thành công
                 .tier(SubscriptionTier.valueOf(request.getTier()))
                 .billingCycle(Subscription.BillingCycle.valueOf(request.getBillingCycle()))
                 .price(price)
@@ -126,17 +124,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                         LocalDateTime.now().plusYears(1) : LocalDateTime.now().plusMonths(1))
                 .build();
         subscriptionRepository.save(subscription);
-        user.setSubscriptionTier(SubscriptionTier.valueOf(request.getTier()));
-        userRepository.save(user);
 
-        // Record subscription history
-        recordSubscriptionHistory(user.getId(), subscription.getId(), "created", null, request.getTier(), price);
+        recordSubscriptionHistory(user.getId(), subscription.getId(), "CREATED", user.getSubscriptionTier().name(), request.getTier(), price);
 
-        // Send confirmation notification
-        emailService.sendSubscriptionConfirmation(user, subscription);
         subscription = subscriptionRepository.save(subscription);
-        
-        // Set the external subscription ID if PayOS was used
+
         if (paymentLinkId != null) {
             subscription.setExternalSubscriptionId(paymentLinkId);
             subscription = subscriptionRepository.save(subscription);
@@ -145,11 +137,9 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         log.info("Successfully created subscription: {} for user: {}", subscription.getId(), user.getId());
         
         SubscriptionDto result = convertToDTO(subscription);
-        
-        // Add PayOS checkout URL to the response (could be added as a custom field or metadata)
-        if (checkoutUrl != null) {
-            log.info("PayOS checkout URL for subscription {}: {}", subscription.getId(), checkoutUrl);
-            // You can add checkoutUrl to response metadata or return it separately
+
+        if (paymentLinkId != null) {
+            log.info("PayOS payment link created for subscription {}", subscription.getId());
         }
         
         return result;
@@ -180,7 +170,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
             BigDecimal newPrice = "yearly".equalsIgnoreCase(request.getBillingCycle()) ? newPlan.getYearlyPrice() : newPlan.getMonthlyPrice();
 
             BigDecimal priceDifference = newPrice.subtract(oldPrice);
-            String paymentProvider = subscription.getPaymentProvider();
             subscription.setTier(SubscriptionTier.valueOf(request.getTier()));
             subscription.setPrice(newPrice);
 
@@ -327,15 +316,14 @@ public class SubscriptionServiceImpl implements SubscriptionService {
                 String description = "Renewal for " + subscription.getTier() + " subscription - " + subscription.getBillingCycle();
                 
                 vn.payos.type.CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
-                        orderCode, subscription.getPrice(), description, user.getEmail(), user.getUsername());
+                        orderCode, subscription.getPrice(), description, user.getEmail());
                 
-                if (paymentResponse != null && paymentResponse.getCheckoutUrl() != null) {
+                if (paymentResponse != null && paymentResponse.getPaymentLinkId() != null) {
                     // Update external subscription ID
                     subscription.setExternalSubscriptionId(paymentResponse.getPaymentLinkId());
                     
                     log.info("PayOS renewal payment link created for subscription: {} with order code: {}", 
                             subscription.getId(), orderCode);
-                    log.info("Checkout URL: {}", paymentResponse.getCheckoutUrl());
                     
                     // For automatic renewal, you might want to implement webhook handling
                     // For now, we'll assume payment is successful (in real scenario, this would be handled by webhook)

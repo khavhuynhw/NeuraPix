@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.kh.neuralpix.model.Subscription;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -46,4 +47,32 @@ public class SubscriptionDto {
 
 //    // Payment history
 //    private List<PaymentHistoryDTO> paymentHistory;
+
+    /**
+     * Convert Subscription entity to DTO
+     */
+    public static SubscriptionDto fromEntity(Subscription subscription) {
+        if (subscription == null) {
+            return null;
+        }
+
+        return SubscriptionDto.builder()
+                .id(subscription.getId())
+                .userId(subscription.getUserId())
+                .tier(subscription.getTier() != null ? subscription.getTier().name() : null)
+                .status(subscription.getStatus() != null ? subscription.getStatus().name() : null)
+                .billingCycle(subscription.getBillingCycle() != null ? subscription.getBillingCycle().name() : null)
+                .price(subscription.getPrice())
+                .currency(subscription.getCurrency())
+                .paymentProvider(subscription.getPaymentProvider())
+                .externalSubscriptionId(subscription.getExternalSubscriptionId())
+                .autoRenew(subscription.getAutoRenew())
+                .cancellationReason(subscription.getCancellationReason())
+                .startDate(subscription.getStartDate())
+                .endDate(subscription.getEndDate())
+                .nextBillingDate(subscription.getNextBillingDate())
+                .cancelledAt(subscription.getCancelledAt())
+                .createdAt(subscription.getCreatedAt())
+                .build();
+    }
 }

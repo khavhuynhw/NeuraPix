@@ -10,12 +10,12 @@ import lombok.Setter;
 @Getter
 @Setter
 public class CreatePaymentLinkRequestBody {
+    private Long userId;
     private String productName;
     private String description;
     private String returnUrl;
     private int price;
     private String cancelUrl;
     private String buyerEmail;
-    private String buyerName;
     private Long subscriptionId; // For linking to subscriptions
 }

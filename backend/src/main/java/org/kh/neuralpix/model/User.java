@@ -96,6 +96,9 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<UserSubscriptionHistory> subscriptionHistory;
 
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Transaction> transactions;
+
     // Helper methods for subscription management
 //    public boolean hasActiveSubscription() {
 //        return subscriptions != null && subscriptions.stream()

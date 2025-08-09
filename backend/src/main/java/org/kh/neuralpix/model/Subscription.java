@@ -1,5 +1,6 @@
 package org.kh.neuralpix.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.Builder;
@@ -12,6 +13,7 @@ import org.kh.neuralpix.model.enums.SubscriptionTier;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "subscriptions")
@@ -33,8 +35,7 @@ public class Subscription {
     private SubscriptionTier tier;
 
     @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('active', 'cancelled', 'expired', 'past_due') DEFAULT 'active'")
-    private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
+    private SubscriptionStatus status = SubscriptionStatus.PENDING;
 
     @Column(name = "start_date", nullable = false)
     private LocalDateTime startDate;
@@ -53,7 +54,7 @@ public class Subscription {
     private String currency = "USD";
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "billing_cycle", columnDefinition = "ENUM('monthly', 'yearly') DEFAULT 'monthly'")
+    @Column(name = "billing_cycle")
     private BillingCycle billingCycle = BillingCycle.MONTHLY;
 
     @Column(name = "payment_provider", length = 50)
@@ -82,7 +83,12 @@ public class Subscription {
     // Relationships
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @JsonIgnore
     private User user;
+
+    @OneToMany(mappedBy = "subscription", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<Transaction> transactions;
 
     public enum BillingCycle{
         MONTHLY,
@@ -90,6 +96,7 @@ public class Subscription {
     }
 
     public  enum SubscriptionStatus{
+        PENDING,
         ACTIVE,
         PAST_DUE,
         CANCELLED,

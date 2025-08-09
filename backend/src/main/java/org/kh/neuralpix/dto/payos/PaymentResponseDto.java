@@ -13,8 +13,6 @@ public class PaymentResponseDto {
     private boolean success;
     private String message;
     private String paymentLinkId;
-    private String checkoutUrl;
-    private String qrCode;
     private Long orderCode;
     private String status;
     private Integer amount;

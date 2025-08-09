@@ -13,8 +13,12 @@ import java.util.Optional;
 public interface SubscriptionRepository extends JpaRepository<Subscription, Long> {
     Subscription findByUserId(Long userId);
     List<Subscription> findByStatus(Subscription.SubscriptionStatus status);
-    @Query("SELECT s FROM Subscription s WHERE s.user.id = :userId AND s.status = 'ACTIVE'")
-    Subscription findActiveByUserId(@Param("userId") Long userId);
+    @Query("SELECT s FROM Subscription s WHERE s.user.id = :userId AND s.status = :status")
+    Subscription findByUserIdAndStatus(@Param("userId") Long userId, @Param("status") Subscription.SubscriptionStatus status);
+    
+    default Subscription findActiveByUserId(Long userId) {
+        return findByUserIdAndStatus(userId, Subscription.SubscriptionStatus.ACTIVE);
+    }
     
     Optional<Subscription> findByExternalSubscriptionId(String externalSubscriptionId);
 }
