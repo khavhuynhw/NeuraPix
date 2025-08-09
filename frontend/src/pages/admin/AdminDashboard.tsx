@@ -26,6 +26,8 @@ import {
   DownloadOutlined,
   ClockCircleOutlined,
 } from "@ant-design/icons";
+import Chart from "react-apexcharts";
+import type { ApexOptions } from "apexcharts";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -41,6 +43,8 @@ const mockStats = {
   conversionRate: 15.2,
   avgImagesPerUser: 37,
 };
+
+
 
 const mockRecentUsers = [
   {
@@ -103,9 +107,73 @@ const mockRecentActivity = [
   },
 ];
 
+
+
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState("7d");
+
+  const mainChartOptions: ApexOptions = {
+    chart: {
+      type: 'bar',
+      height: 480,
+      stacked: true,
+      toolbar: {
+        show: false
+      }
+    },
+    colors: ['#e3f2fd', '#1976d2', '#7c4dff', '#f3e5f5'],
+    plotOptions: {
+      bar: {
+        horizontal: false,
+        columnWidth: '50%',
+      }
+    },
+    xaxis: {
+      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    },
+    legend: {
+      show: true,
+      position: 'bottom',
+      horizontalAlign: 'left'
+    },
+    fill: {
+      opacity: 1
+    },
+    dataLabels: {
+      enabled: false
+    },
+    grid: {
+      show: true,
+      borderColor: '#f0f0f0'
+    },
+    tooltip: {
+      theme: 'light'
+    }
+  };
+
+
+
+  const chartSeries = {
+    mainChart: [
+      {
+        name: 'Investment',
+        data: [35, 125, 35, 35, 35, 80, 35, 20, 35, 45, 15, 75]
+      },
+      {
+        name: 'Loss',
+        data: [35, 15, 15, 35, 65, 40, 80, 25, 15, 85, 25, 75]
+      },
+      {
+        name: 'Profit',
+        data: [35, 145, 35, 35, 20, 105, 100, 10, 65, 45, 30, 10]
+      },
+      {
+        name: 'Maintenance',
+        data: [0, 0, 75, 0, 0, 115, 0, 0, 0, 0, 150, 0]
+      }
+    ]
+  };
 
   const userColumns = [
     {
@@ -147,6 +215,8 @@ const AdminDashboard = () => {
     },
   ];
 
+
+
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "user":
@@ -159,6 +229,8 @@ const AdminDashboard = () => {
         return <ClockCircleOutlined />;
     }
   };
+
+
 
   return (
     <div style={{ padding: "24px" }}>
@@ -197,7 +269,7 @@ const AdminDashboard = () => {
       </div>
 
       <Spin spinning={loading}>
-        {/* Key Metrics */}
+                {/* Key Metrics */}
         <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
           <Col xs={24} sm={12} lg={6}>
             <Card
@@ -210,8 +282,8 @@ const AdminDashboard = () => {
               }}
               bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Total Users</div>
                   <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
                     {mockStats.totalUsers.toLocaleString()}
@@ -237,6 +309,7 @@ const AdminDashboard = () => {
               </div>
             </Card>
           </Col>
+          
           <Col xs={24} sm={12} lg={6}>
             <Card
               style={{
@@ -248,8 +321,8 @@ const AdminDashboard = () => {
               }}
               bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Images Generated</div>
                   <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
                     {mockStats.totalImages.toLocaleString()}
@@ -275,6 +348,7 @@ const AdminDashboard = () => {
               </div>
             </Card>
           </Col>
+
           <Col xs={24} sm={12} lg={6}>
             <Card
               style={{
@@ -286,8 +360,8 @@ const AdminDashboard = () => {
               }}
               bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Premium Users</div>
                   <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
                     {mockStats.premiumUsers.toLocaleString()}
@@ -313,6 +387,7 @@ const AdminDashboard = () => {
               </div>
             </Card>
           </Col>
+
           <Col xs={24} sm={12} lg={6}>
             <Card
               style={{
@@ -324,8 +399,8 @@ const AdminDashboard = () => {
               }}
               bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Monthly Revenue</div>
                   <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
                     ${mockStats.monthlyRevenue.toLocaleString()}
@@ -349,6 +424,54 @@ const AdminDashboard = () => {
                   <DollarOutlined />
                 </div>
               </div>
+            </Card>
+          </Col>
+        </Row>
+
+        {/* Main Growth Chart */}
+        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+          <Col xs={24}>
+            <Card
+              title={
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ 
+                      fontSize: 20, 
+                      fontWeight: 700, 
+                      color: "#1e293b", 
+                      marginBottom: 4,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px'
+                    }}>
+                      Total Growth
+                    </div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: "#1e293b" }}>$2,324.00</div>
+                  </div>
+                  <Select
+                    defaultValue="today"
+                    style={{ width: 120 }}
+                    size="large"
+                    options={[
+                      { value: 'today', label: 'Today' },
+                      { value: 'month', label: 'This Month' },
+                      { value: 'year', label: 'This Year' },
+                    ]}
+                  />
+                </div>
+              }
+              style={{
+                borderRadius: 12,
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+              }}
+              bodyStyle={{ padding: "24px" }}
+            >
+              <Chart
+                options={mainChartOptions}
+                series={chartSeries.mainChart}
+                type="bar"
+                height={480}
+              />
             </Card>
           </Col>
         </Row>
