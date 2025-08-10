@@ -9,6 +9,7 @@ import org.kh.neuralpix.repository.UsageTrackingRepository;
 import org.kh.neuralpix.service.SubscriptionService;
 import org.kh.neuralpix.service.SubscriptionPlanService;
 import org.kh.neuralpix.service.UsageTrackingService;
+import org.kh.neuralpix.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,14 +30,17 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     private final UsageTrackingRepository repository;
     private final SubscriptionService subscriptionService;
     private final SubscriptionPlanService subscriptionPlanService;
+    private final UserService userService;
 
     @Autowired
     public UsageTrackingServiceImpl(UsageTrackingRepository repository,
                                    SubscriptionService subscriptionService,
-                                   SubscriptionPlanService subscriptionPlanService) {
+                                   SubscriptionPlanService subscriptionPlanService,
+                                   UserService userService) {
         this.repository = repository;
         this.subscriptionService = subscriptionService;
         this.subscriptionPlanService = subscriptionPlanService;
+        this.userService = userService;
     }
 
     @Override
@@ -87,8 +91,73 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     }
 
     @Override
+    public void trackImageGenerationUsage(String username) {
+        trackImageGenerationUsage(username, 1);
+    }
+
+    @Override
+    public void trackImageGenerationUsage(String username, int count) {
+        try {
+            var user = userService.findByUsername(username);
+            if (user.isPresent()) {
+                for (int i = 0; i < count; i++) {
+                    trackImageGeneration(user.get().getId());
+                }
+            } else {
+                logger.warn("User not found for username: {}", username);
+            }
+        } catch (Exception e) {
+            logger.error("Error tracking image generation usage for username: {}", username, e);
+        }
+    }
+
+    @Override
+    public void trackChatUsage(String username) {
+        try {
+            var user = userService.findByUsername(username);
+            if (user.isPresent()) {
+                LocalDate today = LocalDate.now();
+                // Track chat usage as a different type or use existing image generation tracking
+                // For now, we'll track it as daily usage for consistency
+                incrementUsage(user.get().getId(), UsageType.DAILY_GENERATION, today);
+                logger.info("Tracked chat usage for user: {}", username);
+            } else {
+                logger.warn("User not found for username: {}", username);
+            }
+        } catch (Exception e) {
+            logger.error("Error tracking chat usage for username: {}", username, e);
+        }
+    }
+
+    @Override
     public boolean canGenerateImage(Long userId) {
         return !hasExceededDailyLimit(userId) && !hasExceededMonthlyLimit(userId);
+    }
+
+    @Override
+    public boolean canGenerateImage(String username) {
+        try {
+            var user = userService.findByUsername(username);
+            if (user.isPresent()) {
+                return canGenerateImage(user.get().getId());
+            } else {
+                logger.warn("User not found for username: {}", username);
+                return false;
+            }
+        } catch (Exception e) {
+            logger.error("Error checking image generation limits for username: {}", username, e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean canProcessImage(String username) {
+        return canGenerateImage(username);
+    }
+
+    @Override
+    public void trackImageProcessingUsage(String username) {
+        trackImageGenerationUsage(username);
     }
 
     @Override

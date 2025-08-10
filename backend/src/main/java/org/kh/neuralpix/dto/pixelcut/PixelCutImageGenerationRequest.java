@@ -24,4 +24,5 @@ public class PixelCutImageGenerationRequest {
     private Integer numImages;
     private String quality;
     private String format;
+    private String imageUrl;
 } 
