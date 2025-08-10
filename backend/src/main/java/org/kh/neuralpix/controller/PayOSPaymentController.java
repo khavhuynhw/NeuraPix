@@ -22,7 +22,7 @@ import java.util.Map;
 @RequestMapping("/api/v2/payments/payos")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin
+@CrossOrigin(origins = {"http://localhost:5173"}, allowCredentials = "true")
 public class PayOSPaymentController {
 
     private final PayOSPaymentService payOSPaymentService;
@@ -32,7 +32,7 @@ public class PayOSPaymentController {
     @PostMapping("/create-payment-link")
     public ResponseEntity<Map<String, Object>> createPaymentLink(@RequestBody CreatePaymentLinkRequestBody request) {
         try {
-            log.info("Creating PayOS payment link for: {}", request.getProductName());
+             log.info("Creating PayOS payment link for: {}", request.getProductName());
 
             Long orderCode = System.currentTimeMillis() / 1000;
 

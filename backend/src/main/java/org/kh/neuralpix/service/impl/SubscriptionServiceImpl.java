@@ -109,7 +109,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = Subscription.builder()
                 .user(user)
                 .userId(request.getUserId())
-                .status(Subscription.SubscriptionStatus.PENDING)  // ✅ Status PENDING cho đến khi payment thành công
+                .status(Subscription.SubscriptionStatus.PENDING)
                 .tier(SubscriptionTier.valueOf(request.getTier()))
                 .billingCycle(Subscription.BillingCycle.valueOf(request.getBillingCycle()))
                 .price(price)

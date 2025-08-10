@@ -18,7 +18,13 @@ public interface UsageTrackingService {
     
     // Enhanced usage tracking methods
     void trackImageGeneration(Long userId);
+    void trackImageGenerationUsage(String username);
+    void trackImageGenerationUsage(String username, int count);
+    void trackChatUsage(String username);
     boolean canGenerateImage(Long userId);
+    boolean canGenerateImage(String username);
+    boolean canProcessImage(String username);
+    void trackImageProcessingUsage(String username);
     int getDailyUsageCount(Long userId, LocalDate date);
     int getMonthlyUsageCount(Long userId, LocalDate date);
     void resetDailyUsage(Long userId);

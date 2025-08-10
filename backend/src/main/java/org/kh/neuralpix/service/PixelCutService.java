@@ -17,6 +17,12 @@ public interface PixelCutService {
     CompletableFuture<PixelCutImageGenerationResponse> upScale(PixelCutImageGenerationRequest request);
     CompletableFuture<PixelCutImageGenerationResponse> removeBackground(PixelCutImageGenerationRequest request);
     CompletableFuture<PixelCutImageGenerationResponse> generateBackground(PixelCutImageGenerationRequest request);
+
+    // Methods with user tracking
+    CompletableFuture<PixelCutImageGenerationResponse> generateImage(PixelCutImageGenerationRequest request, Long userId);
+    CompletableFuture<PixelCutImageGenerationResponse> upScale(PixelCutImageGenerationRequest request, Long userId);
+    CompletableFuture<PixelCutImageGenerationResponse> removeBackground(PixelCutImageGenerationRequest request, Long userId);
+    CompletableFuture<PixelCutImageGenerationResponse> generateBackground(PixelCutImageGenerationRequest request, Long userId);
     /**
      * Generate image from a Prompt entity
      * @param prompt The prompt entity
