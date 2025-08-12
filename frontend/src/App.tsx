@@ -15,7 +15,6 @@ import FeaturesPage from "./pages/FeaturesPage";
 import PricingPage from "./pages/PricingPage";
 import { AuthProvider } from "./context/AuthContext";
 import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import SubscriptionPlans from "./components/SubscriptionPlans";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage";
 import PaymentCancelPage from "./pages/PaymentCancelPage";
 import PaymentFailedPage from "./pages/PaymentFailedPage";
@@ -99,8 +98,7 @@ const App = () => (
                       <Route path="/profile" element={<UserProfilePage />} />
                       <Route path="/billing" element={<BillingPage />} />
                       <Route path="/features" element={<FeaturesPage />} />
-                      <Route path="/pricing" element={<SubscriptionPlans />} />
-                      <Route path="/subscription/plans" element={<SubscriptionPlans />} />
+                      <Route path="/pricing" element={<PricingPage />} />
                       <Route path="/payment/success" element={<PaymentSuccessPage />} />
                       <Route path="/payment/cancel" element={<PaymentCancelPage />} />
                       <Route path="/payment/cancelled" element={<PaymentCancelPage />} />

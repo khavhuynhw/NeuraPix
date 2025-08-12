@@ -1,19 +1,16 @@
 package org.kh.neuralpix.controller;
 
 import jakarta.validation.Valid;
+import org.kh.neuralpix.dto.UserDto;
 import org.kh.neuralpix.dto.users.PagedUserResponse;
 import org.kh.neuralpix.dto.users.UserCreateRequestDto;
 import org.kh.neuralpix.dto.users.UserUpdateRequestDto;
-import org.kh.neuralpix.model.User;
 import org.kh.neuralpix.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -36,7 +33,7 @@ public class UserController {
             @RequestParam(required = false) String plan
     ) {
         PageRequest pageable = PageRequest.of(page, size);
-        Page<User> userPage = userService.findUsersWithFilters(search, role, status, plan, pageable);
+        Page<UserDto> userPage = userService.findUsersWithFilters(search, role, status, plan, pageable);
         PagedUserResponse response = PagedUserResponse.builder()
                 .users(userPage.getContent())
                 .total(userPage.getTotalElements())
@@ -47,28 +44,28 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserDto> getUserById(@PathVariable Long id) {
         return userService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<User> getUserByUsername(@PathVariable String username) {
+    public ResponseEntity<UserDto> getUserByUsername(@PathVariable String username) {
         return userService.findByUsername(username)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping("/email/{email}")
-    public ResponseEntity<User> getUserByEmail(@PathVariable String email) {
+    public ResponseEntity<UserDto> getUserByEmail(@PathVariable String email) {
         return userService.findByEmail(email)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @PostMapping
-    public ResponseEntity<User> createUser(@Valid @RequestBody UserCreateRequestDto userCreateRequestDto) {
+    public ResponseEntity<UserDto> createUser(@Valid @RequestBody UserCreateRequestDto userCreateRequestDto) {
         if (userService.existsByEmail(userCreateRequestDto.getEmail())) {
             return ResponseEntity.badRequest().build();
         }
@@ -76,7 +73,7 @@ public class UserController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto) {
+    public ResponseEntity<UserDto> updateUser(@PathVariable Long id, @Valid @RequestBody UserUpdateRequestDto userUpdateRequestDto) {
         try {
             return ResponseEntity.ok(userService.update(id, userUpdateRequestDto));
         } catch (RuntimeException e) {
@@ -89,4 +86,4 @@ public class UserController {
         userService.deleteById(id);
         return ResponseEntity.ok().build();
     }
-} 
+}

@@ -7,11 +7,17 @@ const TRANSACTION_BASE_URL = `${BASE_URL}/api/v1/transactions`;
 // Types
 export interface CreatePaymentLinkRequest {
   userId: number;
+  subscriptionId?: number;
   productName: string;
   description?: string;
   price: number;
+  currency?: string;
   buyerEmail?: string;
-  subscriptionId?: number;
+  buyerName?: string;
+  buyerPhone?: string;
+  returnUrl?: string;
+  cancelUrl?: string;
+  webhookUrl?: string;
 }
 
 export interface PaymentLinkResponse {
@@ -21,27 +27,55 @@ export interface PaymentLinkResponse {
     paymentLinkId: string;
     checkoutUrl: string;
     qrCode: string;
+    amount: number;
+    currency: string;
+    description: string;
+    status: string;
+    createdAt: string;
+    expiredAt: string;
   };
-  orderCode: number;
+  message?: string;
+  orderCode?: number;
 }
 
 export interface PaymentInfo {
   orderCode: number;
   amount: number;
-  description: string;
-  accountNumber: string;
-  reference: string;
-  transactionDateTime: string;
-  currency: string;
+  amountPaid: number;
+  amountRemaining: number;
+  status: 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED' | 'EXPIRED';
+  createdAt: string;
+  transactions: PaymentTransaction[];
   paymentLinkId: string;
-  code: string;
-  desc: string;
-  status: string;
+  checkoutUrl: string;
+  qrCode: string;
+  currency: string;
+  description: string;
+  buyerEmail?: string;
+  buyerName?: string;
+  buyerPhone?: string;
+  cancellationReason?: string;
+  cancelledAt?: string;
+}
+
+export interface PaymentTransaction {
+  reference: string;
+  amount: number;
+  accountNumber: string;
+  description: string;
+  transactionDateTime: string;
+  virtualAccountName?: string;
+  virtualAccountNumber?: string;
+  counterAccountBankId?: string;
+  counterAccountBankName?: string;
+  counterAccountName?: string;
+  counterAccountNumber?: string;
 }
 
 export interface PaymentInfoResponse {
   success: boolean;
   data: PaymentInfo;
+  message?: string;
 }
 
 export interface Transaction {
@@ -53,17 +87,54 @@ export interface Transaction {
   currency: string;
   status: 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED' | 'EXPIRED' | 'REFUNDED' | 'PROCESSING';
   type: 'SUBSCRIPTION_PAYMENT' | 'SUBSCRIPTION_RENEWAL' | 'SUBSCRIPTION_UPGRADE' | 'SUBSCRIPTION_DOWNGRADE' | 'ONE_TIME_PAYMENT' | 'REFUND';
-  paymentProvider: string;
+  paymentProvider: 'payos' | 'stripe' | 'momo';
+  paymentMethod?: string;
   description: string;
   buyerEmail?: string;
-  paymentMethod?: string;
+  buyerName?: string;
+  buyerPhone?: string;
+  metadata?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
+  completedAt?: string;
+  failedAt?: string;
+  cancelledAt?: string;
+}
+
+export interface CancelPaymentRequest {
+  reason?: string;
+  cancelImmediately?: boolean;
 }
 
 export interface CancelPaymentResponse {
   success: boolean;
   data: PaymentInfo;
+  message?: string;
+}
+
+export interface PaymentWebhookData {
+  orderCode: number;
+  amount: number;
+  description: string;
+  accountNumber: string;
+  reference: string;
+  transactionDateTime: string;
+  currency: string;
+  paymentLinkId: string;
+  code: string;
+  desc: string;
+  counterAccountBankId?: string;
+  counterAccountBankName?: string;
+  counterAccountName?: string;
+  counterAccountNumber?: string;
+  virtualAccountName?: string;
+  virtualAccountNumber?: string;
+}
+
+export interface RefundRequest {
+  orderCode: number;
+  amount?: number;
+  reason: string;
 }
 
 class PaymentApiService {
@@ -116,13 +187,12 @@ class PaymentApiService {
     }
   }
 
-  async cancelPayment(orderCode: number, reason?: string): Promise<CancelPaymentResponse> {
+  async cancelPayment(orderCode: number, request?: CancelPaymentRequest): Promise<CancelPaymentResponse> {
     try {
       const response = await axios.post(
         `${PAYMENT_BASE_URL}/cancel-payment/${orderCode}`,
-        {},
+        request || { reason: 'Payment cancelled by user' },
         {
-          params: { reason: reason || 'Payment cancelled by user' },
           headers: this.getAuthHeaders(),
         }
       );
@@ -231,6 +301,99 @@ class PaymentApiService {
     );
     
     return paymentWindow;
+  }
+
+  /**
+   * Request refund for a payment
+   */
+  async requestRefund(request: RefundRequest): Promise<any> {
+    try {
+      const response = await axios.post(`${PAYMENT_BASE_URL}/refund`, request, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Request refund error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to request refund");
+      }
+      throw new Error("Failed to request refund");
+    }
+  }
+
+  /**
+   * Get payment statistics for user
+   */
+  async getUserPaymentStats(userId: number): Promise<any> {
+    try {
+      const response = await axios.get(`${TRANSACTION_BASE_URL}/user/${userId}/stats`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Get payment stats error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to get payment statistics");
+      }
+      throw new Error("Failed to get payment statistics");
+    }
+  }
+
+  /**
+   * Get transaction history with filters
+   */
+  async getTransactionHistory(params?: {
+    userId?: number;
+    status?: string;
+    type?: string;
+    startDate?: string;
+    endDate?: string;
+    page?: number;
+    size?: number;
+  }): Promise<{transactions: Transaction[], total: number, page: number, size: number}> {
+    try {
+      const queryParams = new URLSearchParams();
+      if (params?.userId) queryParams.append('userId', params.userId.toString());
+      if (params?.status) queryParams.append('status', params.status);
+      if (params?.type) queryParams.append('type', params.type);
+      if (params?.startDate) queryParams.append('startDate', params.startDate);
+      if (params?.endDate) queryParams.append('endDate', params.endDate);
+      if (params?.page) queryParams.append('page', params.page.toString());
+      if (params?.size) queryParams.append('size', params.size.toString());
+
+      const response = await axios.get(`${TRANSACTION_BASE_URL}?${queryParams.toString()}`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return response.data;
+    } catch (error: any) {
+      console.error('Get transaction history error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to get transaction history");
+      }
+      throw new Error("Failed to get transaction history");
+    }
+  }
+
+  /**
+   * Verify payment webhook signature (for security)
+   */
+  async verifyWebhookSignature(signature: string, body: string): Promise<boolean> {
+    try {
+      const response = await axios.post(`${PAYMENT_BASE_URL}/verify-webhook`, {
+        signature,
+        body
+      }, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return response.data.valid || false;
+    } catch (error: any) {
+      console.error('Verify webhook signature error:', error);
+      return false;
+    }
   }
 }
 

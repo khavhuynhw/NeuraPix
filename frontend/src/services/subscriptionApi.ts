@@ -1,53 +1,73 @@
 import axios from "axios";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const SUBSCRIPTION_BASE_URL = `${BASE_URL}/api/v1/subscriptions`;
+const PLANS_BASE_URL = `${BASE_URL}/api/v1/plans`;
 
 // Types
 export interface SubscriptionPlan {
   id: number;
   name: string;
   description: string;
-  tier: string;
+  tier: 'FREE' | 'BASIC' | 'PREMIUM';
   monthlyPrice: number;
   yearlyPrice: number;
+  currency: string;
   dailyGenerationLimit: number;
   monthlyGenerationLimit: number;
   features: string[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Subscription {
   id: number;
   userId: number;
-  tier: string;
-  status: string;
-  billingCycle: string;
+  planId: number;
+  tier: 'FREE' | 'BASIC' | 'PREMIUM';
+  status: 'PENDING' | 'ACTIVE' | 'CANCELLED' | 'EXPIRED' | 'SUSPENDED';
+  billingCycle: 'MONTHLY' | 'YEARLY';
   price: number;
   currency: string;
-  paymentProvider: string;
+  paymentProvider: 'payos' | 'stripe' | 'momo';
   autoRenew: boolean;
   startDate: string;
   endDate: string;
   nextBillingDate: string;
-  plan: SubscriptionPlan;
+  cancelledAt?: string;
+  cancelReason?: string;
+  createdAt: string;
+  updatedAt: string;
+  plan?: SubscriptionPlan;
 }
 
 export interface CreateSubscriptionRequest {
   userId: number;
-  tier: string;
-  billingCycle: "MONTHLY" | "YEARLY";
-  paymentProvider: "payos";
+  planId?: number;
+  tier: 'FREE' | 'BASIC' | 'PREMIUM';
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  paymentProvider: 'payos' | 'stripe' | 'momo';
   autoRenew?: boolean;
 }
 
 export interface UpdateSubscriptionRequest {
-  tier?: string;
-  billingCycle?: "MONTHLY" | "YEARLY";
+  planId?: number;
+  tier?: 'FREE' | 'BASIC' | 'PREMIUM';
+  billingCycle?: 'MONTHLY' | 'YEARLY';
   autoRenew?: boolean;
 }
 
 export interface CancelSubscriptionRequest {
   reason: string;
   cancelImmediately: boolean;
+}
+
+export interface SubscriptionResponse<T = any> {
+  success: boolean;
+  data: T;
+  message?: string;
+  error?: string;
 }
 
 class SubscriptionApiService {
@@ -61,10 +81,14 @@ class SubscriptionApiService {
 
   async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     try {
-      const response = await axios.get(`${BASE_URL}/plans/active`, {
+      const response = await axios.get(`${PLANS_BASE_URL}/active`, {
         headers: this.getAuthHeaders(),
       });
 
+      // Handle both direct data and wrapped response
+      if (response.data.success !== undefined) {
+        return response.data.data || response.data;
+      }
       return response.data;
     } catch (error: any) {
       console.error('Get subscription plans error:', error);
@@ -75,14 +99,58 @@ class SubscriptionApiService {
     }
   }
 
-  async createSubscription(request: CreateSubscriptionRequest): Promise<Subscription> {
+  async getAllSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     try {
-      const response = await axios.post(`${BASE_URL}/subscriptions`, request, {
+      const response = await axios.get(`${PLANS_BASE_URL}`, {
         headers: this.getAuthHeaders(),
       });
 
+      if (response.data.success !== undefined) {
+        return response.data.data || response.data;
+      }
       return response.data;
     } catch (error: any) {
+      console.error('Get all subscription plans error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to get subscription plans");
+      }
+      throw new Error("Failed to get subscription plans");
+    }
+  }
+
+  async getSubscriptionPlan(planId: number): Promise<SubscriptionPlan> {
+    try {
+      const response = await axios.get(`${PLANS_BASE_URL}/${planId}`, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Get subscription plan error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to get subscription plan");
+      }
+      throw new Error("Failed to get subscription plan");
+    }
+  }
+
+  async createSubscription(request: CreateSubscriptionRequest): Promise<Subscription> {
+    try {
+      console.log('Creating subscription with request:', request);
+      const response = await axios.post(`${SUBSCRIPTION_BASE_URL}`, request, {
+        headers: this.getAuthHeaders(),
+      });
+
+      console.log('Subscription creation response:', response.data);
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Create subscription error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to create subscription");
       }
@@ -92,15 +160,19 @@ class SubscriptionApiService {
 
   async getUserSubscription(userId: number): Promise<Subscription | null> {
     try {
-      const response = await axios.get(`${BASE_URL}/subscriptions/user/${userId}`, {
+      const response = await axios.get(`${SUBSCRIPTION_BASE_URL}/user/${userId}`, {
         headers: this.getAuthHeaders(),
       });
 
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 404) {
         return null;
       }
+      console.error('Get user subscription error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to get user subscription");
       }
@@ -108,14 +180,40 @@ class SubscriptionApiService {
     }
   }
 
-  async updateSubscription(subscriptionId: number, request: UpdateSubscriptionRequest): Promise<Subscription> {
+  async getCurrentUserSubscription(): Promise<Subscription | null> {
     try {
-      const response = await axios.put(`${BASE_URL}/subscriptions/${subscriptionId}`, request, {
+      const response = await axios.get(`${SUBSCRIPTION_BASE_URL}/me`, {
         headers: this.getAuthHeaders(),
       });
 
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
       return response.data;
     } catch (error: any) {
+      if (error.response?.status === 404) {
+        return null;
+      }
+      console.error('Get current user subscription error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to get current subscription");
+      }
+      throw new Error("Failed to get current subscription");
+    }
+  }
+
+  async updateSubscription(subscriptionId: number, request: UpdateSubscriptionRequest): Promise<Subscription> {
+    try {
+      const response = await axios.put(`${SUBSCRIPTION_BASE_URL}/${subscriptionId}`, request, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Update subscription error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to update subscription");
       }
@@ -123,12 +221,18 @@ class SubscriptionApiService {
     }
   }
 
-  async cancelSubscription(subscriptionId: number, request: CancelSubscriptionRequest): Promise<void> {
+  async cancelSubscription(subscriptionId: number, request: CancelSubscriptionRequest): Promise<Subscription> {
     try {
-      await axios.post(`${BASE_URL}/subscriptions/${subscriptionId}/cancel`, request, {
+      const response = await axios.post(`${SUBSCRIPTION_BASE_URL}/${subscriptionId}/cancel`, request, {
         headers: this.getAuthHeaders(),
       });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
     } catch (error: any) {
+      console.error('Cancel subscription error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to cancel subscription");
       }
@@ -136,16 +240,60 @@ class SubscriptionApiService {
     }
   }
 
-  async renewSubscription(subscriptionId: number): Promise<void> {
+  async renewSubscription(subscriptionId: number): Promise<Subscription> {
     try {
-      await axios.post(`${BASE_URL}/subscriptions/${subscriptionId}/renew`, {}, {
+      const response = await axios.post(`${SUBSCRIPTION_BASE_URL}/${subscriptionId}/renew`, {}, {
         headers: this.getAuthHeaders(),
       });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
     } catch (error: any) {
+      console.error('Renew subscription error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to renew subscription");
       }
       throw new Error("Failed to renew subscription");
+    }
+  }
+
+  async activateSubscription(subscriptionId: number): Promise<Subscription> {
+    try {
+      const response = await axios.post(`${SUBSCRIPTION_BASE_URL}/${subscriptionId}/activate`, {}, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Activate subscription error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to activate subscription");
+      }
+      throw new Error("Failed to activate subscription");
+    }
+  }
+
+  async suspendSubscription(subscriptionId: number, reason: string): Promise<Subscription> {
+    try {
+      const response = await axios.post(`${SUBSCRIPTION_BASE_URL}/${subscriptionId}/suspend`, { reason }, {
+        headers: this.getAuthHeaders(),
+      });
+
+      if (response.data.success !== undefined) {
+        return response.data.data;
+      }
+      return response.data;
+    } catch (error: any) {
+      console.error('Suspend subscription error:', error);
+      if (error.response?.data) {
+        throw new Error(error.response.data.message || "Failed to suspend subscription");
+      }
+      throw new Error("Failed to suspend subscription");
     }
   }
 }

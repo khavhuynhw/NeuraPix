@@ -2,13 +2,14 @@ import axios from "axios";
 import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const AUTH_BASE_URL = `${BASE_URL}/api/v1/auth`;
 
 
 export async function login(payload: LoginPayload): Promise<LoginResponse> {
   try {
     const response = await axios.post(
-      `${BASE_URL}/auth/login`,
+      `${AUTH_BASE_URL}/login`,
       payload,
       {
         headers: {
@@ -36,7 +37,7 @@ export async function login(payload: LoginPayload): Promise<LoginResponse> {
  */
 export async function register(payload: RegisterPayload): Promise<void> {
   try {
-    await axios.post(`${BASE_URL}/auth/register`, payload, {
+    await axios.post(`${AUTH_BASE_URL}/register`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -55,7 +56,7 @@ export async function register(payload: RegisterPayload): Promise<void> {
  */
 export async function resetPw(payload: ForgotPwPayload): Promise<void> {
   try {
-    await axios.post(`${BASE_URL}/auth/reset-password`, payload, {
+    await axios.post(`${AUTH_BASE_URL}/reset-password`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -78,7 +79,7 @@ export async function confirmResetPw(
 ): Promise<void> {
   console.log(payload)
   try {
-    await axios.post(`${BASE_URL}/auth/reset-password/confirm`, payload, {
+    await axios.post(`${AUTH_BASE_URL}/reset-password/confirm`, payload, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -92,17 +93,44 @@ export async function confirmResetPw(
 }
 
 /**
- * Get current user profile
+ * Gets the current user's profile information
  */
 export async function getProfile(): Promise<User> {
   try {
     const token = localStorage.getItem("accessToken");
-    const response = await axios.get(`${BASE_URL}/auth/profile`, {
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-    });
+    if (!token) {
+      throw new Error("No access token found");
+    }
+
+    // Try multiple possible endpoints for getting current user profile
+    let response;
+    try {
+      // First try the common /auth/me endpoint
+      response = await axios.get(`${AUTH_BASE_URL}/me`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
+    } catch (authError) {
+      // If that fails, try /users/me endpoint
+      try {
+        response = await axios.get(`${BASE_URL}/api/v1/users/me`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      } catch (usersError) {
+        // If that also fails, try /auth/profile endpoint
+        response = await axios.get(`${AUTH_BASE_URL}/profile`, {
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        });
+      }
+    }
 
     return response.data;
   } catch (error: any) {
