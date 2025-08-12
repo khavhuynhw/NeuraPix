@@ -50,8 +50,8 @@ public class Subscription {
     @DecimalMin(value = "0.0", message = "Price cannot be negative")
     private BigDecimal price;
 
-    @Column(length = 3, columnDefinition = "VARCHAR(3) DEFAULT 'USD'")
-    private String currency = "USD";
+    @Column(length = 3, columnDefinition = "VARCHAR(3) DEFAULT 'VND'")
+    private String currency = "VND";
 
     @Enumerated(EnumType.STRING)
     @Column(name = "billing_cycle")

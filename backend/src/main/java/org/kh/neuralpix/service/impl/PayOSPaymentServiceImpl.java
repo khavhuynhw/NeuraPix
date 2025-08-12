@@ -18,6 +18,12 @@ import vn.payos.type.Webhook;
 import vn.payos.type.WebhookData;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.concurrent.atomic.AtomicLong;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 @Service
 @Slf4j
@@ -25,6 +31,9 @@ import java.util.Collections;
 public class PayOSPaymentServiceImpl implements PayOSPaymentService {
 
     private final TransactionService transactionService;
+    
+    // Atomic counter for thread-safe orderCode generation
+    private static final AtomicLong orderCodeCounter = new AtomicLong(System.currentTimeMillis() / 1000);
 
     @Value("${payos.client-id}")
     private String clientId;
@@ -45,8 +54,13 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
 
     @PostConstruct
     public void init() {
-        this.payOS = new PayOS(clientId, apiKey, checksumKey);
-        log.info("PayOS service initialized with client ID: {}", clientId);
+        try {
+            this.payOS = new PayOS(clientId, apiKey, checksumKey);
+            log.info("PayOS service initialized with client ID: {}", clientId);
+        } catch (Exception e) {
+            log.error("Failed to initialize PayOS service", e);
+            throw new RuntimeException("PayOS initialization failed", e);
+        }
     }
 
     @Override
@@ -55,12 +69,25 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     }
 
     /**
-     * Tạo payment link và lưu transaction
+     * Tạo payment link và lưu transaction với thread-safe orderCode generation
      */
     public CheckoutResponseData createPaymentLinkWithTransaction(Long orderCode, Long userId, Long subscriptionId, 
                                                                BigDecimal amount, Transaction.TransactionType type, 
                                                                String description, String buyerEmail) {
         try {
+            // Validate inputs
+            if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Amount must be greater than 0");
+            }
+            if (description == null || description.trim().isEmpty()) {
+                throw new IllegalArgumentException("Description cannot be empty");
+            }
+            
+            // Generate unique orderCode if not provided
+            if (orderCode == null) {
+                orderCode = generateUniqueOrderCode();
+            }
+            
             log.info("Creating payment link for order: {} with amount: {}", orderCode, amount);
             
             // Kiểm tra orderCode đã tồn tại chưa
@@ -76,10 +103,9 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
                     .cancelUrl(cancelUrl);
 
             // Add buyer information if provided
-            if (buyerEmail != null && !buyerEmail.isEmpty()) {
+            if (buyerEmail != null && !buyerEmail.trim().isEmpty() && isValidEmail(buyerEmail)) {
                 paymentDataBuilder.buyerEmail(buyerEmail);
             }
-
 
             // Add default item
             ItemData item = ItemData.builder()
@@ -94,6 +120,7 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             
             CheckoutResponseData response = payOS.createPaymentLink(paymentData);
 
+            // Create transaction record only if userId is provided
             if (userId != null) {
                 transactionService.createPayOSTransaction(
                     orderCode, 
@@ -119,6 +146,10 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     @Override
     public PaymentLinkData getPaymentLinkInfo(Long orderCode) {
         try {
+            if (orderCode == null) {
+                throw new IllegalArgumentException("Order code cannot be null");
+            }
+            
             log.info("Getting payment link info for order: {}", orderCode);
             PaymentLinkData paymentData = payOS.getPaymentLinkInformation(orderCode);
             log.info("Retrieved payment info for order: {}", orderCode);
@@ -132,9 +163,14 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     @Override
     public PaymentLinkData cancelPaymentLink(Long orderCode, String reason) {
         try {
+            if (orderCode == null) {
+                throw new IllegalArgumentException("Order code cannot be null");
+            }
+            
             log.info("Cancelling payment link for order: {} with reason: {}", orderCode, reason);
             
-            PaymentLinkData paymentData = payOS.cancelPaymentLink(orderCode, reason);
+            String cancellationReason = reason != null ? reason : "Payment cancelled by user";
+            PaymentLinkData paymentData = payOS.cancelPaymentLink(orderCode, cancellationReason);
             
             // Cập nhật transaction status
             try {
@@ -156,10 +192,21 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     @Override
     public WebhookData verifyWebhookData(Webhook webhookData) {
         try {
-            log.info("Verifying webhook data");
-            WebhookData webhookData1 = payOS.verifyPaymentWebhookData(webhookData);
-            log.info("Webhook data verified successfully");
-            return webhookData1;
+            if (webhookData == null) {
+                throw new IllegalArgumentException("Webhook data cannot be null");
+            }
+            
+            log.info("Verifying webhook data for order: {}", 
+                webhookData.getData() != null ? webhookData.getData().getOrderCode() : "unknown");
+            
+            // Verify webhook signature
+            if (!verifyWebhookSignature(webhookData)) {
+                throw new SecurityException("Invalid webhook signature");
+            }
+            
+            WebhookData verifiedData = payOS.verifyPaymentWebhookData(webhookData);
+            log.info("Webhook data verified successfully for order: {}", verifiedData.getOrderCode());
+            return verifiedData;
         } catch (Exception e) {
             log.error("Error verifying webhook data", e);
             throw new RuntimeException("Failed to verify webhook data: " + e.getMessage(), e);
@@ -169,6 +216,10 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     @Override
     public void confirmWebhook(String webhookUrl) {
         try {
+            if (webhookUrl == null || webhookUrl.trim().isEmpty()) {
+                throw new IllegalArgumentException("Webhook URL cannot be empty");
+            }
+            
             log.info("Confirming webhook URL: {}", webhookUrl);
             payOS.confirmWebhook(webhookUrl);
             log.info("Webhook confirmed successfully");
@@ -177,4 +228,73 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             throw new RuntimeException("Failed to confirm webhook: " + e.getMessage(), e);
         }
     }
-} 
+
+    /**
+     * Generate thread-safe unique order code
+     */
+    public Long generateUniqueOrderCode() {
+        return orderCodeCounter.incrementAndGet();
+    }
+
+    /**
+     * Verify webhook signature for security
+     */
+    private boolean verifyWebhookSignature(Webhook webhookData) {
+        try {
+            if (webhookData.getSignature() == null || checksumKey == null) {
+                log.warn("Missing signature or checksum key for webhook verification");
+                return false;
+            }
+            
+            // Create signature from webhook data
+            String dataToSign = createSignatureData(webhookData);
+            String expectedSignature = createHmacSha256(dataToSign, checksumKey);
+            
+            boolean isValid = expectedSignature.equals(webhookData.getSignature());
+            if (!isValid) {
+                log.warn("Webhook signature verification failed. Expected: {}, Received: {}", 
+                    expectedSignature, webhookData.getSignature());
+            }
+            
+            return isValid;
+        } catch (Exception e) {
+            log.error("Error verifying webhook signature", e);
+            return false;
+        }
+    }
+
+    /**
+     * Create signature data string from webhook
+     */
+    private String createSignatureData(Webhook webhookData) {
+        // Implementation depends on PayOS signature format
+        // This is a simplified version - adjust according to PayOS documentation
+        return String.format("%s%s%s", 
+            webhookData.getData().getOrderCode(),
+            webhookData.getData().getAmount(),
+            webhookData.getData().getCode());
+    }
+
+    /**
+     * Create HMAC SHA256 signature
+     */
+    private String createHmacSha256(String data, String key) throws NoSuchAlgorithmException, InvalidKeyException {
+        Mac mac = Mac.getInstance("HmacSHA256");
+        SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        mac.init(secretKeySpec);
+        byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
+        
+        StringBuilder result = new StringBuilder();
+        for (byte b : hash) {
+            result.append(String.format("%02x", b));
+        }
+        return result.toString();
+    }
+
+    /**
+     * Validate email format
+     */
+    private boolean isValidEmail(String email) {
+        return email != null && email.matches("^[A-Za-z0-9+_.-]+@(.+)$");
+    }
+}

@@ -61,12 +61,13 @@ class SubscriptionApiService {
 
   async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     try {
-      const response = await axios.get(`${BASE_URL}/subscription-plans`, {
+      const response = await axios.get(`${BASE_URL}/plans/active`, {
         headers: this.getAuthHeaders(),
       });
 
       return response.data;
     } catch (error: any) {
+      console.error('Get subscription plans error:', error);
       if (error.response?.data) {
         throw new Error(error.response.data.message || "Failed to get subscription plans");
       }
