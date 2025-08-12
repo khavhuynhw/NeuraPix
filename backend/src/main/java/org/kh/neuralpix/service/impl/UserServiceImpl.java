@@ -1,6 +1,7 @@
 package org.kh.neuralpix.service.impl;
 
 import jakarta.persistence.criteria.Predicate;
+import org.kh.neuralpix.dto.UserDto;
 import org.kh.neuralpix.dto.users.UserCreateRequestDto;
 import org.kh.neuralpix.dto.users.UserUpdateRequestDto;
 import org.kh.neuralpix.exception.ResourceNotFoundException;
@@ -32,8 +33,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public Page<User> findUsersWithFilters(String search, String role, String status, String plan, Pageable pageable) {
-        return userRepository.findAll((root, query, cb) -> {
+    public Page<UserDto> findUsersWithFilters(String search, String role, String status, String plan, Pageable pageable) {
+        Page<User> page = userRepository.findAll((root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
             if (search != null && !search.isBlank()) {
@@ -58,25 +59,26 @@ public class UserServiceImpl implements UserService {
 
             return cb.and(predicates.toArray(new Predicate[0]));
         }, pageable);
+        return page.map(UserDto::fromEntity);
     }
 
     @Override
-    public Optional<User> findById(Long id) {
-        return userRepository.findById(id);
+    public Optional<UserDto> findById(Long id) {
+        return userRepository.findById(id).map(UserDto::fromEntity);
     }
 
     @Override
-    public Optional<User> findByUsername(String username) {
-        return userRepository.findByUsername(username);
+    public Optional<UserDto> findByUsername(String username) {
+        return userRepository.findByUsername(username).map(UserDto::fromEntity);
     }
 
     @Override
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
+    public Optional<UserDto> findByEmail(String email) {
+        return userRepository.findByEmail(email).map(UserDto::fromEntity);
     }
 
     @Override
-    public User create(UserCreateRequestDto userCreateRequestDto) {
+    public UserDto create(UserCreateRequestDto userCreateRequestDto) {
         User user = new User();
         user.setUsername(userCreateRequestDto.getUsername());
         user.setEmail(userCreateRequestDto.getEmail());
@@ -89,8 +91,9 @@ public class UserServiceImpl implements UserService {
         user.setSubscriptionTier(userCreateRequestDto.getSubscriptionTier());
         user.setIsActive(userCreateRequestDto.getIsActive());
         user.setEmailVerified(userCreateRequestDto.getEmailVerified());
-        
-        return userRepository.save(user);
+
+        User saved = userRepository.save(user);
+        return UserDto.fromEntity(saved);
     }
 
     @Override
@@ -99,7 +102,7 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User update(Long id, UserUpdateRequestDto userUpdateRequestDto) {
+    public UserDto update(Long id, UserUpdateRequestDto userUpdateRequestDto) {
         User existingUser = userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
         
@@ -137,8 +140,9 @@ public class UserServiceImpl implements UserService {
         if (userUpdateRequestDto.getEmailVerified() != null) {
             existingUser.setEmailVerified(userUpdateRequestDto.getEmailVerified());
         }
-        
-        return userRepository.save(existingUser);
+
+        User saved = userRepository.save(existingUser);
+        return UserDto.fromEntity(saved);
     }
 
     @Override

@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.kh.neuralpix.model.User;
+import org.kh.neuralpix.dto.UserDto;
 
 import java.util.List;
 
@@ -13,7 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PagedUserResponse {
-    private List<User> users;
+    private List<UserDto> users;
     private long total;
     private int page;
     private int size;

@@ -1,7 +1,8 @@
 import axios from "axios";
 import type { User, UserCreateRequestDto, UserUpdateRequestDto } from "../types/auth";
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const USERS_BASE_URL = `${BASE_URL}/api/v1/users`;
 
 /**
  * Fetches user data by email
@@ -10,7 +11,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api
  */
 export async function getUserByEmail(email: string): Promise<User> {
   try {
-    const response = await axios.get(`${BASE_URL}/users/email/${email}`, {
+    const response = await axios.get(`${USERS_BASE_URL}/email/${email}`, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -28,7 +29,7 @@ export async function getUserByEmail(email: string): Promise<User> {
 
 export async function getUserById(userId: String): Promise<User> {
   try {
-    const response = await axios.get(`${BASE_URL}/users/${userId}`, {
+    const response = await axios.get(`${USERS_BASE_URL}/${userId}`, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -65,7 +66,7 @@ export async function getAllUsers(params?: {
     if (params?.status && params.status !== 'all') queryParams.append('status', params.status);
     if (params?.plan && params.plan !== 'all') queryParams.append('plan', params.plan);
 
-    const response = await axios.get(`${BASE_URL}/users?${queryParams.toString()}`, {
+    const response = await axios.get(`${USERS_BASE_URL}?${queryParams.toString()}`, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -88,7 +89,7 @@ export async function getAllUsers(params?: {
  */
 export async function createUser(userData: UserCreateRequestDto): Promise<User> {
   try {
-    const response = await axios.post(`${BASE_URL}/users`, userData, {
+    const response = await axios.post(`${USERS_BASE_URL}`, userData, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -112,7 +113,7 @@ export async function createUser(userData: UserCreateRequestDto): Promise<User> 
  */
 export async function updateUser(id: number, userData: UserUpdateRequestDto): Promise<User> {
   try {
-    const response = await axios.put(`${BASE_URL}/users/${id}`, userData, {
+    const response = await axios.put(`${USERS_BASE_URL}/${id}`, userData, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -135,7 +136,7 @@ export async function updateUser(id: number, userData: UserUpdateRequestDto): Pr
  */
 export async function deleteUser(userId: number): Promise<void> {
   try {
-    await axios.delete(`${BASE_URL}/users/${userId}`, {
+    await axios.delete(`${USERS_BASE_URL}/${userId}`, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -157,7 +158,7 @@ export async function deleteUser(userId: number): Promise<void> {
  */
 export async function updateUserStatus(userId: number, isActive: boolean): Promise<User> {
   try {
-    const response = await axios.patch(`${BASE_URL}/users/${userId}/status`, { isActive }, {
+    const response = await axios.patch(`${USERS_BASE_URL}/${userId}/status`, { isActive }, {
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
