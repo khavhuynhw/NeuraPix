@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
-import { login as loginApi, register as registerApi, resetPw as resetPwApi, confirmResetPw as confirmResetPwApi } from "../services/authApi";
+import { login as loginApi, register as registerApi, resetPw as resetPwApi, confirmResetPw as confirmResetPwApi, getProfile } from "../services/authApi";
 import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 interface AuthContextType {
@@ -11,6 +11,7 @@ interface AuthContextType {
   register: (payload: RegisterPayload) => Promise<void>;
   resetPw: (payload: ForgotPwPayload) => Promise<void>;
   confirmResetPw: (payload: ConfirmResetPasswordPayload) => Promise<void>;
+  refreshUser: () => Promise<void>;
   accessToken: string | null;
   refreshToken: string | null;
 }
@@ -83,6 +84,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await confirmResetPwApi(payload);
   };
 
+  const refreshUser = async () => {
+    if (accessToken) {
+      try {
+        const userData = await getProfile();
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+      } catch (error) {
+        console.error('Failed to refresh user data:', error);
+      }
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -93,6 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         resetPw,
         confirmResetPw,
+        refreshUser,
         accessToken,
         refreshToken,
       }}

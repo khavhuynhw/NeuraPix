@@ -14,6 +14,7 @@ public interface SubscriptionService {
     Subscription getById(Long id);
     Subscription getByUserId(Long userId);
     Optional<Subscription> getActiveSubscriptionByUserId(Long userId);
+    void activateSubscription(Long subscriptionId);
     List<Subscription> getByStatus(Subscription.SubscriptionStatus status);
     SubscriptionDto create(SubscriptionCreateRequestDto request);
     SubscriptionDto update(Long id, SubscriptionUpdateDto request);

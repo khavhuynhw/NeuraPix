@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload } from "../types/auth";
+import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api/v1";
@@ -88,5 +88,27 @@ export async function confirmResetPw(
       throw new Error(error.response.data.message || "Reset failed");
     }
     throw new Error("Reset failed");
+  }
+}
+
+/**
+ * Get current user profile
+ */
+export async function getProfile(): Promise<User> {
+  try {
+    const token = localStorage.getItem("accessToken");
+    const response = await axios.get(`${BASE_URL}/auth/profile`, {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || "Failed to get profile");
+    }
+    throw new Error("Failed to get profile");
   }
 }

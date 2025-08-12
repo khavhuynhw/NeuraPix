@@ -11,13 +11,11 @@ import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.exception.SubscriptionException;
 import org.kh.neuralpix.model.*;
 import org.kh.neuralpix.model.enums.SubscriptionTier;
-import org.kh.neuralpix.repository.SubscriptionPlanRepository;
-import org.kh.neuralpix.repository.SubscriptionRepository;
-import org.kh.neuralpix.repository.UserRepository;
-import org.kh.neuralpix.repository.UserSubscriptionHistoryRepository;
+import org.kh.neuralpix.repository.*;
 import org.kh.neuralpix.service.EmailService;
 import org.kh.neuralpix.service.PayOSPaymentService;
 import org.kh.neuralpix.service.SubscriptionService;
+import org.kh.neuralpix.service.TransactionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +35,7 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     private final SubscriptionPlanRepository subscriptionPlanRepository;
     private final PayOSPaymentService payOSPaymentService;
     private final EmailService emailService;
+    private final TransactionRepository transactionRepos;
 
 
     @Override
@@ -59,6 +58,63 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public Optional<Subscription> getActiveSubscriptionByUserId(Long userId) {
         Subscription activeSubscription = subscriptionRepository.findActiveByUserId(userId);
         return Optional.ofNullable(activeSubscription);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void activateSubscription(Long subscriptionId) {
+        log.info("Activating subscription: {}", subscriptionId);
+        
+        try {
+            Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + subscriptionId));
+            
+            if (subscription.getStatus() != Subscription.SubscriptionStatus.PENDING) {
+                throw new IllegalArgumentException("Cannot activate subscription with status: " + subscription.getStatus());
+            }
+            
+            // Activate subscription
+            subscription.setStatus(Subscription.SubscriptionStatus.ACTIVE);
+            subscription.setUpdatedAt(LocalDateTime.now());
+            subscription = subscriptionRepository.save(subscription);
+            
+            // Update user's subscription tier
+            String userId = String.valueOf(subscription.getUserId());
+            User user = userRepository.findById(subscription.getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + userId));
+            
+            SubscriptionTier oldTier = user.getSubscriptionTier();
+            user.setSubscriptionTier(subscription.getTier());
+            user = userRepository.save(user);
+            
+            // Record activation in history
+            recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "ACTIVATED",
+                    oldTier != null ? oldTier.name() : "PENDING", subscription.getTier().name(), subscription.getPrice());
+            
+            // Send confirmation email (non-transactional)
+            sendSubscriptionConfirmationEmailAsync(user, subscription);
+            
+            log.info("Successfully activated subscription: {} for user: {}", subscriptionId, user.getId());
+            
+        } catch (Exception e) {
+            log.error("Error activating subscription: {}", subscriptionId, e);
+            throw e; // This will trigger rollback
+        }
+    }
+    
+    /**
+     * Send email asynchronously to avoid transaction rollback on email failure
+     */
+    private void sendSubscriptionConfirmationEmailAsync(User user, Subscription subscription) {
+        try {
+            emailService.sendSubscriptionConfirmation(user, subscription);
+            log.info("Subscription confirmation email sent for subscription: {}", subscription.getId());
+        } catch (Exception e) {
+            log.error("Failed to send subscription confirmation email for subscription: {} - User will need to be notified manually", 
+                subscription.getId(), e);
+            // Don't fail the activation if email fails - just log it
+            // Consider implementing a retry mechanism or notification queue
+        }
     }
 
     @Override
@@ -87,25 +143,6 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         BigDecimal price = "yearly".equalsIgnoreCase(request.getBillingCycle()) ? plan.getYearlyPrice() : plan.getMonthlyPrice();
 
-        // Create PayOS payment link if PayOS is the payment provider
-        String paymentLinkId = null;
-        if ("payos".equalsIgnoreCase(request.getPaymentProvider())) {
-            try {
-                Long orderCode = System.currentTimeMillis() / 1000;
-                String description =  request.getTier();
-                
-                vn.payos.type.CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
-                        orderCode, price, description, user.getEmail());
-                
-                paymentLinkId = paymentResponse.getPaymentLinkId();
-                
-                log.info("PayOS payment link created for subscription: {}", paymentLinkId);
-            } catch (Exception e) {
-                log.error("Failed to create PayOS payment link for subscription", e);
-                throw new RuntimeException("Failed to create payment link: " + e.getMessage());
-            }
-        }
-
         Subscription subscription = Subscription.builder()
                 .user(user)
                 .userId(request.getUserId())
@@ -129,18 +166,18 @@ public class SubscriptionServiceImpl implements SubscriptionService {
 
         subscription = subscriptionRepository.save(subscription);
 
-        if (paymentLinkId != null) {
-            subscription.setExternalSubscriptionId(paymentLinkId);
-            subscription = subscriptionRepository.save(subscription);
-        }
+//        if (paymentLinkId != null) {
+//            subscription.setExternalSubscriptionId(paymentLinkId);
+//            subscription = subscriptionRepository.save(subscription);
+//        }
         
         log.info("Successfully created subscription: {} for user: {}", subscription.getId(), user.getId());
         
         SubscriptionDto result = convertToDTO(subscription);
 
-        if (paymentLinkId != null) {
-            log.info("PayOS payment link created for subscription {}", subscription.getId());
-        }
+//        if (paymentLinkId != null) {
+//            log.info("PayOS payment link created for subscription {}", subscription.getId());
+//        }
         
         return result;
     }

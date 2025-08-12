@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { fileUploadApi, FileUploadResponse } from '../services/fileUploadApi';
+import { fileUploadApi, type FileUploadResponse } from '../services/fileUploadApi';
 
 interface FileUploadProps {
   onUploadSuccess?: (response: FileUploadResponse) => void;

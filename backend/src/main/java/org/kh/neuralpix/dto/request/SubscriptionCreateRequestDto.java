@@ -24,8 +24,7 @@ public class SubscriptionCreateRequestDto {
     @NotBlank(message = "Payment provider is required")
     private String paymentProvider; // stripe, paypal
 
-    private String currency = "USD";
+    private String currency = "VND";
     private String paymentMethodId; // For Stripe
-    private String paypalOrderId; // For PayPal
     private Boolean autoRenew = true;
 }
