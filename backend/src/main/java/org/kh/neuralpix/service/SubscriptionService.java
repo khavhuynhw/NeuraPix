@@ -4,6 +4,7 @@ import org.kh.neuralpix.dto.SubscriptionDto;
 import org.kh.neuralpix.dto.request.SubscriptionCancelDto;
 import org.kh.neuralpix.dto.request.SubscriptionCreateRequestDto;
 import org.kh.neuralpix.dto.request.SubscriptionUpdateDto;
+import org.kh.neuralpix.dto.request.SubscriptionUpgradeDto;
 import org.kh.neuralpix.model.Subscription;
 
 import java.util.List;
@@ -21,5 +22,6 @@ public interface SubscriptionService {
     void cancelSubscription(Long subscriptionId, SubscriptionCancelDto request);
     void renewSubscription(Long subscriptionId);
     void expireSubscription(Long subscriptionId);
+    SubscriptionDto upgradeSubscription(Long subscriptionId, SubscriptionUpgradeDto request);
     void delete(Long id);
 }

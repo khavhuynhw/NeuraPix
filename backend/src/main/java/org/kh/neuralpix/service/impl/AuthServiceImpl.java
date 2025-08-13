@@ -1,5 +1,6 @@
 package org.kh.neuralpix.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.kh.neuralpix.dto.auth.*;
 import org.kh.neuralpix.exception.ResourceNotFoundException;
 import org.kh.neuralpix.model.PasswordResetToken;
@@ -25,6 +26,7 @@ import java.security.SecureRandom;
 import java.util.Base64;
 
 @Service
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -99,19 +101,27 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+        try {
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
 
-        // Delete any existing reset tokens for this user
-        passwordResetTokenRepository.deleteByUser_Id(user.getId());
+            // Delete any existing reset tokens for this user
+            passwordResetTokenRepository.deleteByUser_Id(user.getId());
 
-        // Generate a new reset token
-        String token = generateResetToken();
-        PasswordResetToken resetToken = new PasswordResetToken(token, user);
-        passwordResetTokenRepository.save(resetToken);
+            // Generate a new reset token
+            String token = generateResetToken();
+            PasswordResetToken resetToken = new PasswordResetToken(token, user);
+            passwordResetTokenRepository.save(resetToken);
 
-        // Send password reset email
-        emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), token);
+            // Send password reset email
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getUsername(), token);
+
+            log.info("Password reset email sent successfully to: {}", user.getEmail());
+
+        } catch (ResourceNotFoundException e) {
+            log.warn("Reset password attempt for non-existent email: {}", request.getEmail());
+            throw e; // Re-throw để controller xử lý
+        }
     }
 
     @Override
@@ -141,18 +151,22 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional
     public void changePassword(ChangePasswordRequest request) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        String username = authentication.getName();
+        try{
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String email = authentication.getName();
 
-        User user = userRepository.findByUsername(username)
-            .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
 
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("Current password is incorrect");
+            if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+                throw new IllegalArgumentException("Current password is incorrect");
+            }
+
+            user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+            userRepository.save(user);
+        }catch (Exception e){
+            throw new RuntimeException("Error changing password: " + e.getMessage());
         }
-
-        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-        userRepository.save(user);
     }
 
     private String generateResetToken() {

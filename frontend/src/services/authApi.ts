@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
+import type { ChangePasswordRequest, ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
@@ -89,6 +89,30 @@ export async function confirmResetPw(
       throw new Error(error.response.data.message || "Reset failed");
     }
     throw new Error("Reset failed");
+  }
+}
+
+/**
+ * Changes the current user's password
+ */
+export async function changePassword(payload: ChangePasswordRequest): Promise<void> {
+  try {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      throw new Error("No access token found");
+    }
+
+    await axios.post(`${AUTH_BASE_URL}/change-password`, payload, {
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+  } catch (error: any) {
+    if (error.response && error.response.data) {
+      throw new Error(error.response.data.message || "Failed to change password");
+    }
+    throw new Error("Failed to change password");
   }
 }
 

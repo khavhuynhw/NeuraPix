@@ -16,6 +16,7 @@ public interface UserService {
     UserDto create(UserCreateRequestDto userCreateRequestDto);
     void deleteById(Long id);
     UserDto update(Long id, UserUpdateRequestDto userUpdateRequestDto);
+    UserDto updateUserAvatar(Long id, String avatarUrl);
     boolean existsByUsername(String username);
     boolean existsByEmail(String email);
 }

@@ -151,6 +151,16 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDto updateUserAvatar(Long id, String avatarUrl) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        
+        existingUser.setAvatarUrl(avatarUrl);
+        User saved = userRepository.save(existingUser);
+        return UserDto.fromEntity(saved);
+    }
+
+    @Override
     public boolean existsByEmail(String email) {
         return userRepository.existsByEmail(email);
     }

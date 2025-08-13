@@ -104,3 +104,25 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+/* Avatar Upload Styles */
+.avatar-uploader .ant-upload {
+  border: none !important;
+  background: none !important;
+}
+
+.avatar-uploader .ant-upload:hover {
+  border: none !important;
+}
+
+.avatar-uploader .ant-upload-select {
+  width: 120px !important;
+  height: 120px !important;
+  border-radius: 50% !important;
+  border: none !important;
+  background: none !important;
+}
+
+.avatar-uploader .ant-upload-select:hover {
+  background: none !important;
+}

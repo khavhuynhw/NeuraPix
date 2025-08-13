@@ -59,6 +59,11 @@ export interface ConfirmResetPasswordPayload {
   newPassword: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+}
+
 export type UserRole = "USER" | "ADMIN";
 
 export type SubscriptionTier = "FREE" | "PREMIUM";
