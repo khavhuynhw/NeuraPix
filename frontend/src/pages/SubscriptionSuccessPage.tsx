@@ -1,8 +1,35 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { 
+  Row, 
+  Col, 
+  Card, 
+  Typography, 
+  Button, 
+  Space, 
+  Spin, 
+  Result, 
+  Descriptions,
+  Tag,
+  Divider,
+  Alert,
+  Timeline
+} from 'antd';
+import { 
+  CheckCircleOutlined, 
+  CloseCircleOutlined, 
+  ReloadOutlined,
+  RocketOutlined,
+  DashboardOutlined,
+  SettingOutlined,
+  CrownOutlined,
+  CalendarOutlined
+} from '@ant-design/icons';
 import { paymentApi, type PaymentInfo } from '../services/paymentApi';
 import { subscriptionApi, type Subscription } from '../services/subscriptionApi';
 import { useAuth } from '../context/AuthContext';
+
+const { Title, Paragraph, Text } = Typography;
 
 const SubscriptionSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -74,13 +101,18 @@ const SubscriptionSuccessPage: React.FC = () => {
   };
 
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (error) {
+      return 'Invalid date';
+    }
   };
 
   const getTierColor = (tier: string): string => {
@@ -121,7 +153,7 @@ const SubscriptionSuccessPage: React.FC = () => {
   };
 
   const handleStartGenerating = () => {
-    navigate('/generator');
+    navigate('/chat');
   };
 
   const handleManageSubscription = () => {
@@ -134,225 +166,400 @@ const SubscriptionSuccessPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex flex-col justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Activating your subscription</h2>
-          <p className="text-gray-600">
-            Please wait while we activate your subscription...
-          </p>
-        </div>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <Card
+          style={{
+            textAlign: 'center',
+            maxWidth: 400,
+            borderRadius: 16,
+            boxShadow: '0 20px 60px rgba(0, 121, 255, 0.1)',
+          }}
+        >
+          <Space direction="vertical" size="large">
+            <Spin size="large" />
+            <Title level={3} style={{ margin: 0, color: '#1f2937' }}>
+              Activating your subscription
+            </Title>
+            <Paragraph style={{ color: '#64748b', margin: 0 }}>
+              Please wait while we activate your subscription...
+            </Paragraph>
+          </Space>
+        </Card>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-white flex flex-col justify-center items-center">
-        <div className="text-center max-w-md">
-          <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Subscription activation failed</h2>
-          <p className="text-gray-600 mb-8">{error}</p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              onClick={verifySubscriptionPayment}
-              className="bg-gray-900 hover:bg-gray-800 text-white font-medium py-2 px-4 rounded-lg transition-colors"
-            >
-              Try again
-            </button>
-            <button
-              onClick={() => navigate('/support')}
-              className="bg-white hover:bg-gray-50 text-gray-900 font-medium py-2 px-4 rounded-lg border border-gray-300 transition-colors"
-            >
-              Contact support
-            </button>
-          </div>
-        </div>
+      <div
+        style={{
+          minHeight: '100vh',
+          background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '20px',
+        }}
+      >
+        <Card
+          style={{
+            maxWidth: 500,
+            borderRadius: 16,
+            boxShadow: '0 20px 60px rgba(0, 121, 255, 0.1)',
+          }}
+        >
+          <Result
+            status="error"
+            title="Subscription activation failed"
+            subTitle={error}
+            extra={[
+              <Button 
+                key="retry" 
+                type="primary" 
+                icon={<ReloadOutlined />}
+                onClick={verifySubscriptionPayment}
+              >
+                Try again
+              </Button>,
+              <Button 
+                key="support" 
+                onClick={() => navigate('/support')}
+              >
+                Contact support
+              </Button>,
+            ]}
+          />
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+    <div
+      style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+        padding: '40px 20px',
+      }}
+    >
+      <div style={{ maxWidth: 1200, margin: '0 auto' }}>
         {/* Success Header */}
-        <div className="text-center mb-12">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-6">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h1 className="text-3xl font-semibold text-gray-900 mb-4">
-            Welcome to {subscription?.tier || 'Premium'}!
-          </h1>
-          <p className="text-lg text-gray-600">
-            Your subscription is now active and ready to use
-          </p>
-        </div>
+        <Card
+          style={{
+            textAlign: 'center',
+            marginBottom: 24,
+            borderRadius: 16,
+            background: 'linear-gradient(135deg, #0079FF 0%, #0056B3 100%)',
+            color: 'white',
+            border: 'none',
+          }}
+          bodyStyle={{ padding: '40px 24px' }}
+        >
+          <Space direction="vertical" size="large">
+            <CheckCircleOutlined 
+              style={{ 
+                fontSize: 64, 
+                color: '#52c41a',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                padding: 16
+              }} 
+            />
+            <div>
+              <Title level={1} style={{ color: 'white', margin: 0 }}>
+                Welcome to {subscription?.tier || 'Premium'}!
+              </Title>
+              <Paragraph style={{ color: 'rgba(255,255,255,0.9)', fontSize: 18, margin: 0 }}>
+                Your subscription is now active and ready to use
+              </Paragraph>
+            </div>
+          </Space>
+        </Card>
 
         {/* Subscription Details Card */}
         {subscription && (
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-8 mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">Subscription Details</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div>
-                  <span className="text-sm text-gray-500">Plan</span>
-                  <p className="text-base font-medium text-gray-900">
-                    {subscription.plan?.name || subscription.tier}
-                  </p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">Billing</span>
-                  <p className="text-base font-medium text-gray-900">
-                    {subscription.billingCycle === 'YEARLY' ? 'Annual' : 'Monthly'} • {formatPrice(subscription.price)}{subscription.billingCycle === 'YEARLY' ? '/year' : '/month'}
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <span className="text-sm text-gray-500">Status</span>
-                  <p className="text-base font-medium text-green-600">{subscription.status}</p>
-                </div>
-                <div>
-                  <span className="text-sm text-gray-500">Next billing date</span>
-                  <p className="text-base font-medium text-gray-900">
-                    {new Date(subscription.nextBillingDate).toLocaleDateString('en-US', { 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Card
+            title={
+              <Space>
+                <CrownOutlined style={{ color: '#0079FF' }} />
+                <span>Subscription Details</span>
+              </Space>
+            }
+            style={{ marginBottom: 24, borderRadius: 16 }}
+            bodyStyle={{ padding: '24px' }}
+          >
+            <Row gutter={[24, 16]}>
+              <Col xs={24} md={12}>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Plan">
+                    <Tag color="blue" style={{ fontSize: 14, padding: '4px 12px' }}>
+                      {subscription.plan?.name || subscription.tier}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Billing">
+                    <Text strong>
+                      {subscription.billingCycle === 'YEARLY' ? 'Annual' : 'Monthly'} • {formatPrice(subscription.price)}
+                      {subscription.billingCycle === 'YEARLY' ? '/year' : '/month'}
+                    </Text>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Col>
+              <Col xs={24} md={12}>
+                <Descriptions column={1} size="small">
+                  <Descriptions.Item label="Status">
+                    <Tag color="success" icon={<CheckCircleOutlined />}>
+                      {subscription.status}
+                    </Tag>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Next billing date">
+                    <Space>
+                      <CalendarOutlined />
+                      <Text>
+                        {new Date(subscription.nextBillingDate).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric' 
+                        })}
+                      </Text>
+                    </Space>
+                  </Descriptions.Item>
+                </Descriptions>
+              </Col>
+            </Row>
+          </Card>
         )}
 
         {/* Payment Receipt */}
         {paymentInfo && (
-          <div className="bg-gray-50 rounded-xl border border-gray-200 p-8 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Payment Receipt</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <span className="text-sm text-gray-500">Order Code</span>
-                <p className="text-sm font-mono text-gray-900 mt-1">{paymentInfo.orderCode}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Amount</span>
-                <p className="text-sm font-semibold text-gray-900 mt-1">{formatPrice(paymentInfo.amount)}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Date</span>
-                <p className="text-sm text-gray-900 mt-1">
-                  {formatDate(paymentInfo.transactionDateTime)}
-                </p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Reference</span>
-                <p className="text-sm font-mono text-gray-900 mt-1">
-                  {paymentInfo.reference || 'N/A'}
-                </p>
-              </div>
-            </div>
-          </div>
+          <Card
+            title="Payment Receipt"
+            style={{ marginBottom: 24, borderRadius: 16 }}
+            bodyStyle={{ padding: '24px' }}
+          >
+            <Row gutter={[16, 16]}>
+              <Col xs={12} sm={6}>
+                <Space direction="vertical" size={2}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Order Code</Text>
+                  <Text code style={{ fontSize: 13 }}>{paymentInfo.orderCode}</Text>
+                </Space>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Space direction="vertical" size={2}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Amount</Text>
+                  <Text strong style={{ color: '#0079FF' }}>{formatPrice(paymentInfo.amount)}</Text>
+                </Space>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Space direction="vertical" size={2}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Payment Date</Text>
+                  <Text style={{ fontSize: 13 }}>
+                    {formatDate(paymentInfo.createdAt)}
+                  </Text>
+                </Space>
+              </Col>
+              <Col xs={12} sm={6}>
+                <Space direction="vertical" size={2}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>Status</Text>
+                  <Tag color={paymentInfo.status === 'PAID' ? 'success' : 'default'}>
+                    {paymentInfo.status}
+                  </Tag>
+                </Space>
+              </Col>
+              {paymentInfo.description && (
+                <Col xs={24}>
+                  <Space direction="vertical" size={2}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Description</Text>
+                    <Text style={{ fontSize: 13 }}>{paymentInfo.description}</Text>
+                  </Space>
+                </Col>
+              )}
+              {paymentInfo.currency && paymentInfo.currency !== 'VND' && (
+                <Col xs={12} sm={6}>
+                  <Space direction="vertical" size={2}>
+                    <Text type="secondary" style={{ fontSize: 12 }}>Currency</Text>
+                    <Text style={{ fontSize: 13 }}>{paymentInfo.currency}</Text>
+                  </Space>
+                </Col>
+              )}
+            </Row>
+          </Card>
         )}
 
         {/* Plan Features */}
         {subscription && (
-          <div className="bg-white border border-gray-200 rounded-xl p-8 mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">
-              What's included in {subscription.tier}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card
+            title={`What's included in ${subscription.tier}`}
+            style={{ marginBottom: 24, borderRadius: 16 }}
+            bodyStyle={{ padding: '24px' }}
+          >
+            <Row gutter={[16, 12]}>
               {getTierFeatures(subscription.tier).map((feature, index) => (
-                <div key={index} className="flex items-start">
-                  <svg className="w-4 h-4 text-green-500 mt-1 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  <span className="text-sm text-gray-700">{feature}</span>
-                </div>
+                <Col key={index} xs={24} md={12}>
+                  <Space align="start">
+                    <CheckCircleOutlined style={{ color: '#52c41a', marginTop: 2 }} />
+                    <Text style={{ fontSize: 14 }}>{feature}</Text>
+                  </Space>
+                </Col>
               ))}
-            </div>
-          </div>
+            </Row>
+          </Card>
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-8">
-          <button
-            onClick={handleStartGenerating}
-            className="flex-1 bg-gray-900 hover:bg-gray-800 text-white font-medium py-3 px-6 rounded-lg transition-colors"
-          >
-            Start creating
-          </button>
-          <button
-            onClick={handleViewDashboard}
-            className="flex-1 bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-6 rounded-lg border border-gray-300 transition-colors"
-          >
-            View dashboard
-          </button>
-          <button
-            onClick={handleManageSubscription}
-            className="flex-1 bg-white hover:bg-gray-50 text-gray-900 font-medium py-3 px-6 rounded-lg border border-gray-300 transition-colors"
-          >
-            Manage subscription
-          </button>
-        </div>
+        <Card style={{ marginBottom: 24, borderRadius: 16 }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={8}>
+              <Button
+                type="primary"
+                size="large"
+                block
+                icon={<RocketOutlined />}
+                onClick={handleStartGenerating}
+                style={{
+                  height: 48,
+                  background: 'linear-gradient(135deg, #0079FF 0%, #0056B3 100%)',
+                  border: 'none',
+                  borderRadius: 8,
+                }}
+              >
+                Start Creating
+              </Button>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Button
+                size="large"
+                block
+                icon={<DashboardOutlined />}
+                onClick={handleViewDashboard}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                }}
+              >
+                View Dashboard
+              </Button>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Button
+                size="large"
+                block
+                icon={<SettingOutlined />}
+                onClick={handleManageSubscription}
+                style={{
+                  height: 48,
+                  borderRadius: 8,
+                }}
+              >
+                Manage Subscription
+              </Button>
+            </Col>
+          </Row>
+        </Card>
 
         {/* Next Steps */}
-        <div className="bg-blue-50 rounded-xl border border-blue-200 p-8 mb-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">What's next?</h3>
-          <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold mr-4 mt-0.5">
-                1
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Start generating images</h4>
-                <p className="text-sm text-gray-600 mt-1">Use our AI image generator with your new plan limits</p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold mr-4 mt-0.5">
-                2
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Explore advanced features</h4>
-                <p className="text-sm text-gray-600 mt-1">Try high-resolution outputs and priority processing</p>
-              </div>
-            </div>
-            <div className="flex items-start">
-              <div className="flex-shrink-0 w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-semibold mr-4 mt-0.5">
-                3
-              </div>
-              <div>
-                <h4 className="font-medium text-gray-900">Check your email</h4>
-                <p className="text-sm text-gray-600 mt-1">We've sent a confirmation email with your receipt</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <Card
+          title="What's next?"
+          style={{ 
+            marginBottom: 24, 
+            borderRadius: 16,
+            background: 'linear-gradient(135deg, #e6f3ff 0%, #f0f8ff 100%)',
+            border: '1px solid #b3d9ff'
+          }}
+          bodyStyle={{ padding: '24px' }}
+        >
+          <Timeline
+            items={[
+              {
+                dot: <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: '#0079FF',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}>1</div>,
+                children: (
+                  <div>
+                    <Title level={5} style={{ margin: 0, marginBottom: 4 }}>Start generating images</Title>
+                    <Text type="secondary">Use our AI image generator with your new plan limits</Text>
+                  </div>
+                ),
+              },
+              {
+                dot: <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: '#0079FF',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}>2</div>,
+                children: (
+                  <div>
+                    <Title level={5} style={{ margin: 0, marginBottom: 4 }}>Explore advanced features</Title>
+                    <Text type="secondary">Try high-resolution outputs and priority processing</Text>
+                  </div>
+                ),
+              },
+              {
+                dot: <div style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: '50%',
+                  backgroundColor: '#0079FF',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 12,
+                  fontWeight: 'bold'
+                }}>3</div>,
+                children: (
+                  <div>
+                    <Title level={5} style={{ margin: 0, marginBottom: 4 }}>Check your email</Title>
+                    <Text type="secondary">We've sent a confirmation email with your receipt</Text>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </Card>
 
         {/* Footer */}
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">
-            Thank you for choosing NeuralPix! We're excited to see what you'll create.
-          </p>
-          <p className="text-sm text-gray-500">
-            Need help getting started?{' '}
-            <a href="/support" className="text-blue-600 hover:text-blue-700 font-medium">
-              Contact support
-            </a>{' '}
-            or{' '}
-            <a href="/docs" className="text-blue-600 hover:text-blue-700 font-medium">
-              view our docs
-            </a>
-          </p>
-        </div>
+        <Card style={{ textAlign: 'center', borderRadius: 16 }}>
+          <Space direction="vertical" size="small">
+            <Paragraph style={{ fontSize: 16, color: '#64748b', margin: 0 }}>
+              Thank you for choosing NeuralPix! We're excited to see what you'll create.
+            </Paragraph>
+            <Paragraph style={{ fontSize: 14, color: '#9ca3af', margin: 0 }}>
+              Need help getting started?{' '}
+              <a href="/support" style={{ color: '#0079FF', fontWeight: 500 }}>
+                Contact support
+              </a>{' '}
+              or{' '}
+              <a href="/docs" style={{ color: '#0079FF', fontWeight: 500 }}>
+                view our docs
+              </a>
+            </Paragraph>
+          </Space>
+        </Card>
       </div>
     </div>
   );

@@ -6,6 +6,8 @@ import {
   SettingOutlined,
   LogoutOutlined,
   DashboardOutlined,
+  CrownOutlined,
+  CreditCardOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -43,6 +45,18 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
       icon: <UserOutlined />,
       label: "Profile",
       onClick: () => navigate("/profile"),
+    },
+    {
+      key: "subscription",
+      icon: <CrownOutlined />,
+      label: "Subscription",
+      onClick: () => navigate("/profile?tab=subscription"),
+    },
+    {
+      key: "transactions",
+      icon: <CreditCardOutlined />,
+      label: "Transactions",
+      onClick: () => navigate("/profile?tab=transactions"),
     },
     {
       key: "settings",
@@ -91,8 +105,8 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
 
   // Generate avatar from user info
   const getUserAvatar = () => {
-    if (user?.avatar) {
-      return user.avatar;
+    if (user?.avatarUrl) {
+      return user.avatarUrl;
     }
     // Generate a colorful avatar based on user name
     const name = getUserDisplayName();

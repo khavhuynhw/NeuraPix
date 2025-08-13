@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 public interface CloudinaryService {
     CompletableFuture<String> uploadImage(MultipartFile file);
+    CompletableFuture<String> uploadImage(MultipartFile file, String folder);
     CompletableFuture<String> uploadImageFromBase64(String base64Data);
     CompletableFuture<String> uploadImageFromBase64(String base64Data, String folder);
     CompletableFuture<String> uploadImageFromUrl(String imageUrl);

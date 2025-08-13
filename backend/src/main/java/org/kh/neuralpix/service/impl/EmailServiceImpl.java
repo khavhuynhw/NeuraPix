@@ -18,12 +18,14 @@ import java.io.StringWriter;
 import java.time.Year;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.security.SecureRandom;
 
 @Service
 public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
     private final MustacheFactory mustacheFactory;
+    private final SecureRandom secureRandom = new SecureRandom();
     
     @Value("${spring.mail.username}")
     private String fromEmail;
@@ -54,10 +56,19 @@ public class EmailServiceImpl implements EmailService {
             var message = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom(fromEmail);
+            // Set sender with proper name and email
+            helper.setFrom(fromEmail, "NeuralPix Support");
             helper.setTo(to);
+            helper.setReplyTo("noreply@neuralpix.com", "NeuralPix No-Reply");
             helper.setSubject("Reset Your NeuralPix Password");
             helper.setText(emailContent, true);
+            
+            // Add headers to improve deliverability
+            message.setHeader("List-Unsubscribe", "<mailto:unsubscribe@neuralpix.com>");
+            message.setHeader("X-Mailer", "NeuralPix Email Service");
+            message.setHeader("Message-ID", generateMessageId());
+            message.setHeader("X-Priority", "3");
+            message.setHeader("Importance", "Normal");
 
             mailSender.send(message);
         } catch (Exception e) {
@@ -98,14 +109,72 @@ public class EmailServiceImpl implements EmailService {
             var message = mailSender.createMimeMessage();
             var helper = new MimeMessageHelper(message, true, "UTF-8");
             
-            helper.setFrom(fromEmail);
+            helper.setFrom(fromEmail, "NeuralPix Support");
             helper.setTo(user.getEmail());
+            helper.setReplyTo("noreply@neuralpix.com", "NeuralPix No-Reply");
             helper.setSubject("Welcome to NeuralPix " + getTierDisplayName(subscription.getTier()) + "! 🎉");
             helper.setText(emailContent, true);
+            
+            // Add headers to improve deliverability
+            message.setHeader("List-Unsubscribe", "<mailto:unsubscribe@neuralpix.com>");
+            message.setHeader("X-Mailer", "NeuralPix Email Service");
+            message.setHeader("Message-ID", generateMessageId());
+            message.setHeader("X-Priority", "3");
+            message.setHeader("Importance", "Normal");
 
             mailSender.send(message);
         } catch (Exception e) {
             throw new RuntimeException("Failed to send subscription confirmation email", e);
+        }
+    }
+
+    @Override
+    public void sendUpgradeConfirmation(User user, Subscription subscription) {
+        try {
+            Reader templateReader = new InputStreamReader(new ClassPathResource("templates/email/upgrade-confirmation.html").getInputStream());
+            Mustache mustache = mustacheFactory.compile(templateReader, "upgrade-confirmation");
+
+            Map<String, Object> context = new HashMap<>();
+            context.put("username", user.getUsername());
+            context.put("email", user.getEmail());
+            context.put("tierName", getTierDisplayName(subscription.getTier()));
+            context.put("billingCycle", formatBillingCycle(subscription.getBillingCycle()));
+            context.put("price", subscription.getPrice());
+            context.put("currency", subscription.getCurrency() != null ? subscription.getCurrency() : "VND");
+            context.put("paymentProvider", formatPaymentProvider(subscription.getPaymentProvider()));
+            context.put("startDate", formatDate(subscription.getStartDate()));
+            context.put("nextBillingDate", formatDate(subscription.getNextBillingDate()));
+            context.put("dashboardUrl", frontendUrl + "/dashboard");
+            context.put("currentYear", Year.now().getValue());
+
+            List<String> benefits = getTierBenefits(subscription.getTier());
+            if (!benefits.isEmpty()) {
+                context.put("benefits", true);
+                context.put("benefitsList", benefits);
+            }
+
+            StringWriter writer = new StringWriter();
+            mustache.execute(writer, context);
+            String emailContent = writer.toString();
+
+            var message = mailSender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, true, "UTF-8");
+
+            helper.setFrom(fromEmail, "NeuralPix Support");
+            helper.setTo(user.getEmail());
+            helper.setReplyTo("noreply@neuralpix.com", "NeuralPix No-Reply");
+            helper.setSubject("Your NeuralPix subscription was upgraded to " + getTierDisplayName(subscription.getTier()) + " ✅");
+            helper.setText(emailContent, true);
+
+            message.setHeader("List-Unsubscribe", "<mailto:unsubscribe@neuralpix.com>");
+            message.setHeader("X-Mailer", "NeuralPix Email Service");
+            message.setHeader("Message-ID", generateMessageId());
+            message.setHeader("X-Priority", "3");
+            message.setHeader("Importance", "Normal");
+
+            mailSender.send(message);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to send upgrade confirmation email", e);
         }
     }
 
@@ -117,6 +186,8 @@ public class EmailServiceImpl implements EmailService {
                 return "Basic";
             case PREMIUM:
                 return "Premium";
+            case ENTERPRISE:
+                return "Enterprise";
             default:
                 return tier.name();
         }
@@ -181,6 +252,15 @@ public class EmailServiceImpl implements EmailService {
                 benefits.add("API access");
                 benefits.add("Advanced AI models");
                 benefits.add("Bulk generation tools");
+                break;
+            case ENTERPRISE:
+                benefits.add("Unlimited image generations");
+                benefits.add("Custom ultra-high resolution (4096x4096+)");
+                benefits.add("Dedicated infrastructure and SLAs");
+                benefits.add("Account manager and priority support");
+                benefits.add("Enterprise SSO and security features");
+                benefits.add("Custom feature development");
+                benefits.add("Volume discounts and invoicing");
                 break;
         }
         
@@ -335,5 +415,18 @@ public class EmailServiceImpl implements EmailService {
         } else {
             return "";
         }
+    }
+    
+    /**
+     * Generate unique Message-ID for better email deliverability
+     */
+    private String generateMessageId() {
+        byte[] randomBytes = new byte[16];
+        secureRandom.nextBytes(randomBytes);
+        StringBuilder sb = new StringBuilder();
+        for (byte b : randomBytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return "<" + sb.toString() + "@neuralpix.com>";
     }
 } 

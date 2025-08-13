@@ -4,6 +4,7 @@ import org.kh.neuralpix.dto.SubscriptionDto;
 import org.kh.neuralpix.dto.request.SubscriptionCancelDto;
 import org.kh.neuralpix.dto.request.SubscriptionCreateRequestDto;
 import org.kh.neuralpix.dto.request.SubscriptionUpdateDto;
+import org.kh.neuralpix.dto.request.SubscriptionUpgradeDto;
 import org.kh.neuralpix.model.Subscription;
 import org.kh.neuralpix.service.SubscriptionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -107,6 +108,32 @@ public class SubscriptionController {
             Map<String, Object> error = new HashMap<>();
             error.put("success", false);
             error.put("message", "Failed to renew subscription: " + e.getMessage());
+            error.put("subscriptionId", subscriptionId);
+            return ResponseEntity.internalServerError().body(error);
+        }
+    }
+
+    @PostMapping("/{subscriptionId}/upgrade")
+    public ResponseEntity<Map<String, Object>> upgradeSubscription(
+            @PathVariable Long subscriptionId, 
+            @RequestBody SubscriptionUpgradeDto request) {
+        try {
+            log.info("Upgrading subscription: {} to tier: {}", subscriptionId, request.getNewTier());
+            
+            SubscriptionDto upgradedSubscription = service.upgradeSubscription(subscriptionId, request);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Subscription upgraded successfully");
+            response.put("subscription", upgradedSubscription);
+            response.put("newTier", request.getNewTier().name());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            log.error("Error upgrading subscription: {}", subscriptionId, e);
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Failed to upgrade subscription: " + e.getMessage());
             error.put("subscriptionId", subscriptionId);
             return ResponseEntity.internalServerError().body(error);
         }

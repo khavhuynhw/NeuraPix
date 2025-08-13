@@ -200,6 +200,11 @@ public class PayOSPaymentController {
         }
     }
 
+    @PostMapping("/webhook")
+    public ResponseEntity<String> handleWebhook(){
+        return ResponseEntity.ok("Webhook endpoint is active. Please send a POST request with valid data.");
+    }
+
     @PostMapping("/cancel-payment/{orderCode}")
     public ResponseEntity<Map<String, Object>> cancelPayment(@PathVariable @NotNull Long orderCode, 
                                                            @RequestParam(required = false) String reason) {

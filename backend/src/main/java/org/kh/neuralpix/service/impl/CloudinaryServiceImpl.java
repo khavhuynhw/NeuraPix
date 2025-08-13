@@ -55,12 +55,17 @@ public class CloudinaryServiceImpl implements CloudinaryService {
 
     @Override
     public CompletableFuture<String> uploadImage(MultipartFile file) {
+        return uploadImage(file, defaultFolder);
+    }
+
+    @Override
+    public CompletableFuture<String> uploadImage(MultipartFile file, String folder) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 validateCloudinaryConfig();
                 
                 Map<String, Object> uploadParams = ObjectUtils.asMap(
-                    "folder", defaultFolder,
+                    "folder", folder,
                     "resource_type", "image",
                     "unique_filename", true,
                     "use_filename", false,

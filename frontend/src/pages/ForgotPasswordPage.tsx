@@ -1,4 +1,4 @@
-import { Form, Input, Button, Typography, Row, Col, Space } from "antd";
+import { Form, Input, Button, Typography, Row, Col, Space, message } from "antd";
 import { MailOutlined, ArrowLeftOutlined } from "@ant-design/icons";
 import { Link } from "react-router-dom";
 import { Sparkle } from "lucide-react";
@@ -15,13 +15,24 @@ export const ForgotPasswordPage = () => {
       await resetPw({
         email: values.email,
       });
-    } catch (error: any) {
-      form.setFields([
-        {
-          name: "email",
-          errors: [error.message || "Reset password failed"],
+      
+      // Show success message
+      message.success({
+        content: "Password reset link sent! Please check your email inbox and spam folder.",
+        duration: 6,
+        style: {
+          marginTop: '20vh',
         },
-      ]);
+      });
+      
+      // Clear form
+      form.resetFields();
+      
+    } catch (error: any) {
+      message.error({
+        content: error.message || "Failed to send reset email. Please try again.",
+        duration: 4,
+      });
     }
   };
 

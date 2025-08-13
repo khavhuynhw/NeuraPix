@@ -296,6 +296,32 @@ class SubscriptionApiService {
       throw new Error("Failed to suspend subscription");
     }
   }
+
+  async upgradeSubscription(subscriptionId: number, upgradeData: {
+    newTier: string;
+    reason: string;
+    upgradeImmediately: boolean;
+    paymentMethod?: string;
+    paymentOrderCode?: number;
+  }): Promise<{ success: boolean; message?: string; subscription?: Subscription }> {
+    try {
+      const response = await axios.post(`${BASE_URL}/api/v1/subscriptions/${subscriptionId}/upgrade`, upgradeData, {
+        headers: this.getAuthHeaders(),
+      });
+
+      return {
+        success: response.data.success,
+        message: response.data.message,
+        subscription: response.data.subscription,
+      };
+    } catch (error: any) {
+      console.error('Upgrade subscription error:', error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw new Error("Failed to upgrade subscription");
+    }
+  }
 }
 
 export const subscriptionApi = new SubscriptionApiService();

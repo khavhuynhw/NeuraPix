@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import type { ReactNode } from "react";
 import { login as loginApi, register as registerApi, resetPw as resetPwApi, confirmResetPw as confirmResetPwApi, getProfile } from "../services/authApi";
+import { getUserByEmail } from "../services/userApi";
 import type { ConfirmResetPasswordPayload, ForgotPwPayload, LoginPayload, LoginResponse, RegisterPayload, User } from "../types/auth";
 
 interface AuthContextType {
@@ -85,13 +86,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const refreshUser = async () => {
-    if (accessToken) {
+    if (accessToken && user?.email) {
       try {
-        const userData = await getProfile();
+        // Use the working getUserByEmail API since getProfile() doesn't work with our current backend endpoints
+        const userData = await getUserByEmail(user.email);
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
       } catch (error) {
         console.error('Failed to refresh user data:', error);
+        // Fallback to getProfile if getUserByEmail fails
+        try {
+          const userData = await getProfile();
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+        } catch (fallbackError) {
+          console.error('Fallback getProfile also failed:', fallbackError);
+        }
       }
     }
   };
