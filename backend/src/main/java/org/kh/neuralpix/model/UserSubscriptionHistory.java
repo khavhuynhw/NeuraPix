@@ -69,6 +69,7 @@ public class UserSubscriptionHistory {
         DOWNGRADED,
         RENEWED,
         CANCELLED,
+        ACTIVATED,
         REACTIVATED,
         EXPIRED;
     }

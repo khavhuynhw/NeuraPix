@@ -14,7 +14,7 @@ public class WebConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry
-                        .addMapping("/**").allowedOrigins("http://localhost:5173")
+                        .addMapping("/**").allowedOrigins("http://localhost:5173","https://e3158794a4ff592aaa9adf8e9081a9b0.serveo.net")
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                         .allowedHeaders("*")
                         .allowCredentials(true);

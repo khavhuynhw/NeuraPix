@@ -2,13 +2,16 @@ package org.kh.neuralpix.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kh.neuralpix.constants.PayOSConstants;
 import org.kh.neuralpix.model.Transaction;
 import org.kh.neuralpix.repository.TransactionRepository;
 import org.kh.neuralpix.service.TransactionService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -41,10 +44,10 @@ public class TransactionServiceImpl implements TransactionService {
                 .userId(userId)
                 .subscriptionId(subscriptionId)
                 .amount(amount)
-                .currency("VND")
+                .currency(PayOSConstants.DEFAULT_CURRENCY)
                 .status(Transaction.TransactionStatus.PENDING)
                 .type(type)
-                .paymentProvider("PAYOS")
+                .paymentProvider(PayOSConstants.DEFAULT_PAYMENT_PROVIDER)
                 .description(description)
                 .buyerEmail(buyerEmail)
                 .build();
@@ -101,6 +104,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Transaction markTransactionAsPaid(Long orderCode, String paymentMethod) {
         log.info("Marking transaction as paid - OrderCode: {}", orderCode);
         
@@ -111,13 +115,29 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         Transaction transaction = optionalTransaction.get();
+        
+        // Check if transaction is already paid to prevent double processing
+        if (transaction.isPaid()) {
+            log.warn("Transaction {} is already marked as paid, skipping update", orderCode);
+            return transaction;
+        }
+        
+        // Check if transaction is in a valid state for payment
+        if (transaction.getStatus() != Transaction.TransactionStatus.PENDING) {
+            log.error("Cannot mark transaction as paid. Current status: {}", transaction.getStatus());
+            throw new IllegalStateException("Transaction is not in pending status: " + transaction.getStatus());
+        }
+        
         transaction.markAsPaid();
         transaction.setPaymentMethod(paymentMethod);
 
-        return transactionRepository.save(transaction);
+        Transaction updatedTransaction = transactionRepository.save(transaction);
+        log.info("Successfully marked transaction as paid - OrderCode: {}", orderCode);
+        return updatedTransaction;
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Transaction markTransactionAsCancelled(Long orderCode) {
         log.info("Marking transaction as cancelled - OrderCode: {}", orderCode);
         
@@ -128,12 +148,23 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         Transaction transaction = optionalTransaction.get();
-        transaction.markAsCancelled(null);
+        
+        // Check if transaction is already in a final state
+        if (transaction.isPaid() || transaction.isCancelled() || transaction.isFailed()) {
+            log.warn("Transaction {} is already in final state: {}, skipping cancellation", 
+                orderCode, transaction.getStatus());
+            return transaction;
+        }
+        
+        transaction.markAsCancelled("Payment cancelled");
 
-        return transactionRepository.save(transaction);
+        Transaction updatedTransaction = transactionRepository.save(transaction);
+        log.info("Successfully marked transaction as cancelled - OrderCode: {}", orderCode);
+        return updatedTransaction;
     }
 
     @Override
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public Transaction markTransactionAsFailed(Long orderCode) {
         log.info("Marking transaction as failed - OrderCode: {}", orderCode);
         
@@ -144,9 +175,19 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         Transaction transaction = optionalTransaction.get();
-        transaction.markAsFailed(null);
+        
+        // Check if transaction is already in a final state
+        if (transaction.isPaid() || transaction.isCancelled() || transaction.isFailed()) {
+            log.warn("Transaction {} is already in final state: {}, skipping failure marking", 
+                orderCode, transaction.getStatus());
+            return transaction;
+        }
+        
+        transaction.markAsFailed("Payment failed");
 
-        return transactionRepository.save(transaction);
+        Transaction updatedTransaction = transactionRepository.save(transaction);
+        log.info("Successfully marked transaction as failed - OrderCode: {}", orderCode);
+        return updatedTransaction;
     }
 
     @Override
@@ -156,19 +197,48 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
+    @Transactional
     public void cancelExpiredPendingTransactions(int expiredHours) {
         log.info("Cancelling expired pending transactions older than {} hours", expiredHours);
         
         LocalDateTime expiredTime = LocalDateTime.now().minusHours(expiredHours);
         List<Transaction> expiredTransactions = transactionRepository.findExpiredPendingTransactions(expiredTime);
         
+        int cancelledCount = 0;
         for (Transaction transaction : expiredTransactions) {
-            transaction.markAsCancelled("Expired - automatically cancelled");
-            transactionRepository.save(transaction);
-            log.info("Cancelled expired transaction with order code: {}", transaction.getOrderCode());
+            try {
+                // Check if transaction is still pending before cancelling
+                if (transaction.getStatus() == Transaction.TransactionStatus.PENDING) {
+                    transaction.markAsCancelled("Expired - automatically cancelled after " + expiredHours + " hours");
+                    transactionRepository.save(transaction);
+                    log.info("Cancelled expired transaction with order code: {}", transaction.getOrderCode());
+                    cancelledCount++;
+                } else {
+                    log.debug("Skipping transaction {} - no longer pending (status: {})", 
+                        transaction.getOrderCode(), transaction.getStatus());
+                }
+            } catch (Exception e) {
+                log.error("Error cancelling expired transaction with order code: {}", 
+                    transaction.getOrderCode(), e);
+            }
         }
         
-        log.info("Cancelled {} expired transactions", expiredTransactions.size());
+        log.info("Cancelled {} expired transactions out of {} found", cancelledCount, expiredTransactions.size());
+    }
+    
+    /**
+     * Scheduled task to automatically cancel expired pending transactions
+     * Runs every hour and cancels transactions older than 24 hours
+     */
+    @Scheduled(cron = "0 0 * * * *") // Run every hour at minute 0
+    @Transactional
+    public void scheduledCancelExpiredTransactions() {
+        try {
+            log.info("Running scheduled cleanup of expired transactions");
+            cancelExpiredPendingTransactions(24); // Cancel transactions older than 24 hours
+        } catch (Exception e) {
+            log.error("Error in scheduled transaction cleanup", e);
+        }
     }
 
     @Override
