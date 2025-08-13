@@ -77,7 +77,7 @@ public class EmailServiceImpl implements EmailService {
             context.put("tierName", getTierDisplayName(subscription.getTier()));
             context.put("billingCycle", formatBillingCycle(subscription.getBillingCycle()));
             context.put("price", subscription.getPrice());
-            context.put("currency", subscription.getCurrency() != null ? subscription.getCurrency() : "USD");
+            context.put("currency", subscription.getCurrency() != null ? subscription.getCurrency() : "VND");
             context.put("paymentProvider", formatPaymentProvider(subscription.getPaymentProvider()));
             context.put("startDate", formatDate(subscription.getStartDate()));
             context.put("nextBillingDate", formatDate(subscription.getNextBillingDate()));

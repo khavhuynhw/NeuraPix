@@ -1,6 +1,7 @@
 package org.kh.neuralpix.config;
 
 import lombok.Data;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,6 +9,9 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "app.payment")
 @Data
 public class PaymentConfig {
+    
+    @Value("${app.webhook.base-url:http://localhost:8080}")
+    private String webhookBaseUrl;
     
     /**
      * Frontend URLs for payment redirects
@@ -52,6 +56,20 @@ public class PaymentConfig {
         public String getHomeUrl() {
             return baseUrl + homePath;
         }
+    }
+    
+    /**
+     * Get the configured webhook base URL
+     */
+    public String getWebhookBaseUrl() {
+        return webhookBaseUrl;
+    }
+    
+    /**
+     * Get the full webhook URL
+     */
+    public String getWebhookUrl() {
+        return webhookBaseUrl + "/api/v2/payments/payos/webhook";
     }
     
     @Data

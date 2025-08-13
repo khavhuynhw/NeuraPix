@@ -2,6 +2,7 @@ package org.kh.neuralpix.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.kh.neuralpix.constants.PayOSConstants;
 import org.kh.neuralpix.model.Transaction;
 import org.kh.neuralpix.service.TransactionService;
 import org.springframework.beans.factory.annotation.Value;
@@ -52,6 +53,9 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
 
     private PayOS payOS;
 
+    @Value("${app.webhook.base-url:http://localhost:8080}")
+    private String webhookBaseUrl;
+    
     @PostConstruct
     public void init() {
         try {
@@ -62,6 +66,7 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             throw new RuntimeException("PayOS initialization failed", e);
         }
     }
+    
 
     @Override
     public CheckoutResponseData createPaymentLink(Long orderCode, BigDecimal amount, String description, String buyerEmail) {
@@ -79,8 +84,17 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
             if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
                 throw new IllegalArgumentException("Amount must be greater than 0");
             }
+            if (amount.intValue() < PayOSConstants.MIN_AMOUNT) {
+                throw new IllegalArgumentException("Amount must be at least " + PayOSConstants.MIN_AMOUNT + " VND");
+            }
+            if (amount.intValue() > PayOSConstants.MAX_AMOUNT) {
+                throw new IllegalArgumentException("Amount cannot exceed " + PayOSConstants.MAX_AMOUNT + " VND");
+            }
             if (description == null || description.trim().isEmpty()) {
                 throw new IllegalArgumentException("Description cannot be empty");
+            }
+            if (description.length() > PayOSConstants.MAX_DESCRIPTION_LENGTH) {
+                throw new IllegalArgumentException("Description cannot exceed " + PayOSConstants.MAX_DESCRIPTION_LENGTH + " characters");
             }
             
             // Generate unique orderCode if not provided
@@ -196,15 +210,20 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
                 throw new IllegalArgumentException("Webhook data cannot be null");
             }
             
-            log.info("Verifying webhook data for order: {}", 
-                webhookData.getData() != null ? webhookData.getData().getOrderCode() : "unknown");
-            
-            // Verify webhook signature
-            if (!verifyWebhookSignature(webhookData)) {
-                throw new SecurityException("Invalid webhook signature");
+            if (webhookData.getData() == null) {
+                throw new IllegalArgumentException("Webhook data content cannot be null");
             }
             
+            log.info("Verifying webhook data for order: {}", webhookData.getData().getOrderCode());
+            
+            // For PayOS, we'll use their built-in verification instead of custom signature verification
+            // This is more reliable than implementing our own signature logic
             WebhookData verifiedData = payOS.verifyPaymentWebhookData(webhookData);
+            
+            if (verifiedData == null || verifiedData.getOrderCode() == null) {
+                throw new SecurityException("Invalid webhook data after verification");
+            }
+            
             log.info("Webhook data verified successfully for order: {}", verifiedData.getOrderCode());
             return verifiedData;
         } catch (Exception e) {
@@ -237,16 +256,22 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     }
 
     /**
-     * Verify webhook signature for security
+     * Verify webhook signature for security - Backup method if needed
+     * Note: PayOS SDK's verifyPaymentWebhookData should be used primarily
      */
     private boolean verifyWebhookSignature(Webhook webhookData) {
         try {
+            if (webhookData == null || webhookData.getData() == null) {
+                log.warn("Webhook data or signature is null");
+                return false;
+            }
+            
             if (webhookData.getSignature() == null || checksumKey == null) {
                 log.warn("Missing signature or checksum key for webhook verification");
                 return false;
             }
             
-            // Create signature from webhook data
+            // Create signature from webhook data according to PayOS documentation
             String dataToSign = createSignatureData(webhookData);
             String expectedSignature = createHmacSha256(dataToSign, checksumKey);
             
@@ -264,21 +289,29 @@ public class PayOSPaymentServiceImpl implements PayOSPaymentService {
     }
 
     /**
-     * Create signature data string from webhook
+     * Create signature data string from webhook according to PayOS format
      */
     private String createSignatureData(Webhook webhookData) {
-        // Implementation depends on PayOS signature format
-        // This is a simplified version - adjust according to PayOS documentation
+        if (webhookData == null || webhookData.getData() == null) {
+            throw new IllegalArgumentException("Webhook data cannot be null for signature creation");
+        }
+        
+        // PayOS signature format: orderCode + amount + description + returnUrl + cancelUrl
+        // Adjust this based on actual PayOS documentation
         return String.format("%s%s%s", 
-            webhookData.getData().getOrderCode(),
-            webhookData.getData().getAmount(),
-            webhookData.getData().getCode());
+            webhookData.getData().getOrderCode() != null ? webhookData.getData().getOrderCode() : "",
+            webhookData.getData().getAmount() != null ? webhookData.getData().getAmount() : "",
+            webhookData.getData().getCode() != null ? webhookData.getData().getCode() : "");
     }
 
     /**
      * Create HMAC SHA256 signature
      */
     private String createHmacSha256(String data, String key) throws NoSuchAlgorithmException, InvalidKeyException {
+        if (data == null || key == null) {
+            throw new IllegalArgumentException("Data and key cannot be null for HMAC generation");
+        }
+        
         Mac mac = Mac.getInstance("HmacSHA256");
         SecretKeySpec secretKeySpec = new SecretKeySpec(key.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
         mac.init(secretKeySpec);
