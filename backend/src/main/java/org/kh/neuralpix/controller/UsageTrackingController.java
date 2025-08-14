@@ -4,6 +4,7 @@ import org.kh.neuralpix.dto.response.UsageTrackingResponseDto;
 import org.kh.neuralpix.model.UsageTracking;
 import org.kh.neuralpix.model.UsageTracking.UsageType;
 import org.kh.neuralpix.service.UsageTrackingService;
+import org.kh.neuralpix.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,10 +19,12 @@ import java.util.HashMap;
 public class UsageTrackingController {
 
     private final UsageTrackingService service;
+    private final UserService userService;
 
     @Autowired
-    public UsageTrackingController(UsageTrackingService service) {
+    public UsageTrackingController(UsageTrackingService service, UserService userService) {
         this.service = service;
+        this.userService = userService;
     }
 
     @GetMapping
@@ -121,6 +124,27 @@ public class UsageTrackingController {
     public ResponseEntity<String> resetMonthlyUsage(@PathVariable Long userId) {
         service.resetMonthlyUsage(userId);
         return ResponseEntity.ok("Monthly usage reset successfully");
+    }
+
+    @PostMapping("/reset-usage-by-email")
+    public ResponseEntity<String> resetUsageByEmail(@RequestParam String email) {
+        try {
+            // Find user by email
+            var userOptional = userService.findByEmail(email);
+            if (userOptional.isEmpty()) {
+                return ResponseEntity.badRequest().body("User not found with email: " + email);
+            }
+            
+            Long userId = userOptional.get().getId();
+            
+            // Reset both daily and monthly usage
+            service.resetDailyUsage(userId);
+            service.resetMonthlyUsage(userId);
+            
+            return ResponseEntity.ok("Usage reset successfully for user: " + email);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body("Error resetting usage: " + e.getMessage());
+        }
     }
 
     @GetMapping("/limits/{userId}")
