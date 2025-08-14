@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.validator.constraints.URL;
 import org.kh.neuralpix.model.enums.GenerationStatus;
+import org.kh.neuralpix.config.GenerationStatusConverter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -25,7 +26,7 @@ public class GeneratedImage {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "prompt_id", nullable = false)
+    @Column(name = "prompt_id")
     private Long promptId;
 
     @Column(name = "user_id", nullable = false)
@@ -48,8 +49,8 @@ public class GeneratedImage {
     @DecimalMin(value = "0.0", message = "Generation time cannot be negative")
     private BigDecimal generationTime;
 
-    @Enumerated(EnumType.STRING)
-    @Column(columnDefinition = "ENUM('pending', 'generating', 'completed', 'failed') DEFAULT 'pending'")
+    @Convert(converter = GenerationStatusConverter.class)
+    @Column(name = "status", columnDefinition = "ENUM('pending', 'generating', 'completed', 'failed') DEFAULT 'pending'")
     private GenerationStatus status = GenerationStatus.PENDING;
 
     @Column(name = "error_message", columnDefinition = "TEXT")

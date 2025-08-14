@@ -8,6 +8,9 @@ import {
   DashboardOutlined,
   CrownOutlined,
   CreditCardOutlined,
+  MessageOutlined,
+  ThunderboltOutlined,
+  HistoryOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -40,6 +43,15 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
   };
 
   const userMenuItems = [
+    {
+      key: "chat",
+      icon: <MessageOutlined />,
+      label: "Chat",
+      onClick: () => navigate("/chat"),
+    },
+    {
+      type: "divider" as const,
+    },
     {
       key: "profile",
       icon: <UserOutlined />,
@@ -80,7 +92,7 @@ export const Header = ({ onGetStarted }: HeaderProps) => {
     {
       type: "divider" as const,
     },
-    {
+    {      
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Logout",
