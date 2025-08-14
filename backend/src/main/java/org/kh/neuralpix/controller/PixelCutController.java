@@ -2,8 +2,11 @@ package org.kh.neuralpix.controller;
 
 import org.kh.neuralpix.dto.pixelcut.PixelCutImageGenerationRequest;
 import org.kh.neuralpix.dto.pixelcut.PixelCutImageGenerationResponse;
+import org.kh.neuralpix.model.GeneratedImage;
+import org.kh.neuralpix.service.GeneratedImageService;
 import org.kh.neuralpix.service.PixelCutService;
 import org.kh.neuralpix.service.UsageTrackingService;
+import org.kh.neuralpix.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +28,12 @@ public class PixelCutController {
 
     @Autowired
     private UsageTrackingService usageTrackingService;
+
+    @Autowired
+    private GeneratedImageService generatedImageService;
+
+    @Autowired
+    private UserService userService;
 
     @PostMapping("/remove-background")
     public CompletableFuture<ResponseEntity<PixelCutImageGenerationResponse>> removeBackground(
@@ -57,6 +66,10 @@ public class PixelCutController {
                 if (response.isSuccess()) {
                     usageTrackingService.trackImageProcessingUsage(authentication.getName());
                     logger.info("Tracked background removal usage for user: {}", authentication.getName());
+                    
+                    // Create GeneratedImage record for work history
+                    createGeneratedImageRecord(authentication.getName(), response, "remove-background", 
+                                             request.getImageUrl(), null);
                 }
                 
                 return ResponseEntity.ok(response);
@@ -112,6 +125,10 @@ public class PixelCutController {
                 if (response.isSuccess()) {
                     usageTrackingService.trackImageProcessingUsage(authentication.getName());
                     logger.info("Tracked background generation usage for user: {}", authentication.getName());
+                    
+                    // Create GeneratedImage record for work history
+                    createGeneratedImageRecord(authentication.getName(), response, "generate-background", 
+                                             request.getImageUrl(), request.getPrompt());
                 }
                 
                 return ResponseEntity.ok(response);
@@ -170,6 +187,10 @@ public class PixelCutController {
                 if (response.isSuccess()) {
                     usageTrackingService.trackImageProcessingUsage(authentication.getName());
                     logger.info("Tracked image upscaling usage for user: {}", authentication.getName());
+                    
+                    // Create GeneratedImage record for work history
+                    createGeneratedImageRecord(authentication.getName(), response, "upscale", 
+                                             request.getImageUrl(), "Image upscaling " + request.getScale() + "x");
                 }
                 
                 return ResponseEntity.ok(response);
@@ -188,5 +209,52 @@ public class PixelCutController {
     @GetMapping("/health")
     public ResponseEntity<String> healthCheck() {
         return ResponseEntity.ok("PixelCut Controller is running!");
+    }
+
+    /**
+     * Helper method to create GeneratedImage record for work history tracking
+     */
+    private void createGeneratedImageRecord(String username, PixelCutImageGenerationResponse response, 
+                                          String operation, String originalImageUrl, String prompt) {
+        try {
+            // Get user ID
+            Long userId = userService.findByEmail(username)
+                    .orElseThrow(() -> new RuntimeException("User not found"))
+                    .getId();
+            
+            // Get the processed image URL from response
+            String processedImageUrl = null;
+            Integer fileSize = null;
+            
+            if (response.getImageUrls() != null && !response.getImageUrls().isEmpty()) {
+                processedImageUrl = response.getImageUrls().get(0);
+            } else if (response.getImages() != null && !response.getImages().isEmpty()) {
+                processedImageUrl = response.getImages().get(0).getImageUrl();
+                fileSize = response.getImages().get(0).getFileSize();
+            }
+            
+            if (processedImageUrl != null) {
+                // Create GeneratedImage record without prompt
+                String promptText = prompt != null ? prompt : (operation + " operation");
+                GeneratedImage generatedImage = generatedImageService.createImageFromPixelCutProcessing(
+                    processedImageUrl,
+                    null, // No thumbnail for PixelCut operations
+                    userId,
+                    fileSize,
+                    operation,
+                    promptText
+                );
+                
+                logger.info("Created GeneratedImage record {} for {} operation by user {}", 
+                           generatedImage.getId(), operation, username);
+            } else {
+                logger.warn("No processed image URL found in PixelCut response for {} operation", operation);
+            }
+            
+        } catch (Exception e) {
+            logger.error("Failed to create GeneratedImage record for {} operation by user {}: {}", 
+                        operation, username, e.getMessage(), e);
+            // Don't fail the main operation, just log the error
+        }
     }
 }

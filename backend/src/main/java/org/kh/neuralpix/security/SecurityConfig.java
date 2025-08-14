@@ -21,6 +21,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
@@ -29,6 +30,9 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    
+    @Value("${app.cors.allowed-origins:http://localhost:5173}")
+    private String allowedOrigins;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthFilter, UserDetailsService userDetailsService) {
         this.jwtAuthFilter = jwtAuthFilter;
@@ -41,14 +45,26 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Public authentication endpoints
                         .requestMatchers("/auth/**").permitAll()
-                        // Swagger UI v3 (OpenAPI)
+                        
+                        // Swagger UI endpoints (should be restricted in production)
                         .requestMatchers("/v3/api-docs/**").permitAll()
                         .requestMatchers("/swagger-ui/**").permitAll()
                         .requestMatchers("/swagger-ui.html").permitAll()
                         .requestMatchers("/swagger-resources/**").permitAll()
                         .requestMatchers("/webjars/**").permitAll()
-                        .anyRequest().permitAll()
+                        
+                        // Payment webhook endpoints (external system callbacks)
+                        .requestMatchers("/api/v2/payments/payos/webhook/**").permitAll()
+                        .requestMatchers("/api/v2/payments/payos/return/**").permitAll()
+                        .requestMatchers("/api/v2/payments/payos/cancel/**").permitAll()
+                        
+                        // Health check endpoint
+                        .requestMatchers("/actuator/health").permitAll()
+                        
+                        // All other endpoints require authentication
+                        .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -80,10 +96,29 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.addAllowedOrigin("http://localhost:5173"); //
-        config.addAllowedMethod("*");
+        
+        // Configure allowed origins from environment variable (supports multiple origins)
+        String[] origins = allowedOrigins.split(",");
+        for (String origin : origins) {
+            config.addAllowedOrigin(origin.trim());
+        }
+        
+        // Configure allowed methods
+        config.addAllowedMethod("GET");
+        config.addAllowedMethod("POST");
+        config.addAllowedMethod("PUT");
+        config.addAllowedMethod("DELETE");
+        config.addAllowedMethod("PATCH");
+        config.addAllowedMethod("OPTIONS");
+        
+        // Configure allowed headers
         config.addAllowedHeader("*");
-        config.setAllowCredentials(true); // nếu bạn lưu JWT ở cookie
+        
+        // Allow credentials for JWT authentication
+        config.setAllowCredentials(true);
+        
+        // Cache preflight response for 1 hour
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import {
   Layout,
   Typography,
@@ -12,7 +14,6 @@ import {
   Alert,
   Modal,
   Select,
-  Space,
   Card,
 } from "antd";
 import {
@@ -35,7 +36,9 @@ import {
 import { geminiApi, imageUtils } from "../services/geminiApi";
 import type { GeminiChatRequest, GeminiChatResponse } from "../services/geminiApi";
 import { pixelcutApi, pixelcutUtils } from "../services/pixelcutApi";
-import type { PixelCutRequest, PixelCutResponse } from "../services/pixelcutApi";
+import type { PixelCutResponse } from "../services/pixelcutApi";
+import { generatedImageApi, imageApiUtils } from "../services/generatedImageApi";
+import type { GeneratedImageResponse } from "../services/generatedImageApi";
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -59,41 +62,17 @@ interface Conversation {
 }
 
 export const ChatPage = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  
   const [conversations, setConversations] = useState<Conversation[]>([
-    {
-      id: "1",
-      title: "Welcome Chat",
-      lastMessage: "Hello! How can I help you today?",
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      messages: [
-        {
-          id: "1",
-          content: "Hello! How can I help you today?",
-          sender: "assistant",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5),
-        },
-      ],
-    },
-    {
-      id: "2",
-      title: "React Components",
-      lastMessage: "Can you help me with React components?",
-      timestamp: new Date(Date.now() - 1000 * 60 * 60),
-      messages: [
-        {
-          id: "2",
-          content: "Can you help me with React components?",
-          sender: "user",
-          timestamp: new Date(Date.now() - 1000 * 60 * 60),
-        },
-      ],
-    },
+    
   ]);
 
   const [currentConversationId, setCurrentConversationId] = useState("1");
   const [inputValue, setInputValue] = useState("");
 
-  const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
+  // Removed unused generatedImageUrl state
   const [isGenerating, setIsGenerating] = useState(false);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -112,6 +91,16 @@ export const ChatPage = () => {
   // Drag and drop states
   const [isDragOver, setIsDragOver] = useState(false);
 
+  // Generated images states
+  const [userGeneratedImages, setUserGeneratedImages] = useState<GeneratedImageResponse[]>([]);
+  const [isLoadingImages, setIsLoadingImages] = useState(false);
+  const [showImageGallery, setShowImageGallery] = useState(true);
+
+  // Rename conversation states
+  const [renameModalVisible, setRenameModalVisible] = useState(false);
+  const [conversationToRename, setConversationToRename] = useState<string | null>(null);
+  const [newConversationTitle, setNewConversationTitle] = useState("");
+
   const currentConversation = conversations.find(
     (conv) => conv.id === currentConversationId,
   );
@@ -119,6 +108,59 @@ export const ChatPage = () => {
   useEffect(() => {
     scrollToBottom();
   }, [currentConversation?.messages]);
+
+  // Fetch user's generated images on component mount
+  useEffect(() => {
+    fetchUserGeneratedImages();
+  }, []);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl/Cmd + N: New conversation
+      if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        createNewConversation();
+      }
+      
+      // Ctrl/Cmd + D: Delete current conversation
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd' && currentConversationId) {
+        e.preventDefault();
+        deleteConversation(currentConversationId);
+      }
+
+      // Ctrl/Cmd + R: Rename current conversation
+      if ((e.ctrlKey || e.metaKey) && e.key === 'r' && currentConversationId) {
+        e.preventDefault();
+        openRenameModal(currentConversationId);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [currentConversationId, conversations]);
+
+  const fetchUserGeneratedImages = async () => {
+    setIsLoadingImages(true);
+    try {
+      const images = await generatedImageApi.getRecentUserImages(20);
+      const readyImages = images.filter(img => img.imageUrl && !img.isDeleted);
+      const sortedImages = imageApiUtils.sortImagesByDate(readyImages);
+      setUserGeneratedImages(sortedImages);
+      
+      if (sortedImages.length === 0 && images.length > 0) {
+        // No ready images found but images exist - they may still be processing
+        message.warning('Some images are still processing or have issues');
+      }
+    } catch (error) {
+      console.error('Error fetching user generated images:', error);
+      message.error('Failed to load your generated images: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoadingImages(false);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -136,6 +178,30 @@ export const ChatPage = () => {
       setCurrentConversationId(newConversation.id);
     } catch (error) {
       console.error('Error creating new conversation:', error);
+    }
+  };
+
+  // Function to add generated image to current conversation
+  const addImageToChat = async (image: GeneratedImageResponse) => {
+    try {
+      // Record view count
+      await generatedImageApi.viewImage(image.id);
+      
+      // Create a message with the image
+      const imageMessage: Message = {
+        id: Date.now().toString(),
+        content: `🖼️ Added from gallery: Generated on ${new Date(image.createdAt).toLocaleDateString()}`,
+        sender: "user",
+        timestamp: new Date(),
+        images: [image.imageUrl],
+        messageType: "IMAGE",
+      };
+
+      updateCurrentConversation(imageMessage);
+      message.success('Image added to conversation');
+    } catch (error) {
+      console.error('Error adding image to chat:', error);
+      message.error('Failed to add image to chat');
     }
   };
 
@@ -195,6 +261,9 @@ export const ChatPage = () => {
         updateCurrentConversation(processedMessage);
         message.success(`${operationName} completed successfully!`);
         setPixelcutModalVisible(false);
+        
+        // Refresh user's generated images after processing
+        fetchUserGeneratedImages();
       } else {
         throw new Error(response.errorMessage || 'Processing failed');
       }
@@ -341,6 +410,26 @@ export const ChatPage = () => {
       // Handle different response types
       if (response.messageType === 'IMAGE') {
         message.success('🎨 Image generated successfully!');
+        
+        // Save generated images to backend database
+        if (response.generatedImages && response.generatedImages.length > 0) {
+          try {
+            await Promise.all(response.generatedImages.map(async (imageUrl) => {
+              await generatedImageApi.createImage({
+                imageUrl: imageUrl,
+                status: 'completed',
+                isPublic: false,
+              });
+            }));
+            // Successfully saved generated images to database
+          } catch (error) {
+            console.error('Failed to save generated images to database:', error);
+            // Don't show error to user - this is background operation
+          }
+        }
+        
+        // Refresh user's generated images after new image generation
+        fetchUserGeneratedImages();
       } else if (response.messageType === 'ENHANCED_PROMPT') {
         message.success('Enhanced prompt generated!');
       } else if (response.messageType === 'TEXT') {
@@ -409,16 +498,7 @@ export const ChatPage = () => {
     }
   };
 
-  const handleDownload = () => {
-    if (generatedImageUrl) {
-      const link = document.createElement("a");
-      link.href = generatedImageUrl;
-      link.download = `generated-image-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
-  };
+  // Removed unused handleDownload function
 
   const handleImageUpload = async (file: File) => {
     try {
@@ -448,16 +528,93 @@ export const ChatPage = () => {
   };
 
   const deleteConversation = (conversationId: string) => {
-    const updatedConversations = conversations.filter(
-      (conv) => conv.id !== conversationId,
-    );
-    setConversations(updatedConversations);
+    const conversationToDelete = conversations.find(conv => conv.id === conversationId);
+    
+    Modal.confirm({
+      title: 'Delete Conversation',
+      content: `Are you sure you want to delete the conversation "${conversationToDelete?.title || 'Unknown'}"? This action cannot be undone.`,
+      okText: 'Delete',
+      cancelText: 'Cancel',
+      okType: 'danger',
+      icon: <ExclamationCircleOutlined />,
+      onOk() {
+        try {
+          const updatedConversations = conversations.filter(
+            (conv) => conv.id !== conversationId,
+          );
+          setConversations(updatedConversations);
 
-    if (conversationId === currentConversationId) {
-      setCurrentConversationId(
-        updatedConversations.length > 0 ? updatedConversations[0].id : "",
-      );
+          if (conversationId === currentConversationId) {
+            setCurrentConversationId(
+              updatedConversations.length > 0 ? updatedConversations[0].id : "",
+            );
+          }
+
+          message.success('Conversation deleted successfully');
+        } catch (error) {
+          console.error('Error deleting conversation:', error);
+          message.error('An error occurred while deleting the conversation');
+        }
+      },
+    });
+  };
+
+  const openRenameModal = (conversationId: string) => {
+    const conversation = conversations.find(conv => conv.id === conversationId);
+    if (conversation) {
+      setConversationToRename(conversationId);
+      setNewConversationTitle(conversation.title);
+      setRenameModalVisible(true);
     }
+  };
+
+  const handleRenameConversation = () => {
+    if (!conversationToRename || !newConversationTitle.trim()) {
+      message.error('Please enter a conversation name');
+      return;
+    }
+
+    try {
+      const updatedConversations = conversations.map(conv =>
+        conv.id === conversationToRename
+          ? { ...conv, title: newConversationTitle.trim() }
+          : conv
+      );
+      setConversations(updatedConversations);
+      setRenameModalVisible(false);
+      setConversationToRename(null);
+      setNewConversationTitle("");
+      message.success('Conversation renamed successfully');
+    } catch (error) {
+      console.error('Error renaming conversation:', error);
+      message.error('An error occurred while renaming the conversation');
+    }
+  };
+
+  const clearAllConversations = () => {
+    Modal.confirm({
+      title: 'Delete All Conversations',
+      content: `Are you sure you want to delete all ${conversations.length} conversations? This action cannot be undone.`,
+      okText: 'Delete All',
+      cancelText: 'Cancel',
+      okType: 'danger',
+      icon: <ExclamationCircleOutlined />,
+      onOk() {
+        try {
+          setConversations([]);
+          setCurrentConversationId("");
+          message.success('All conversations deleted successfully');
+        } catch (error) {
+          console.error('Error clearing all conversations:', error);
+          message.error('An error occurred while deleting all conversations');
+        }
+      },
+    });
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
   };
 
   const userMenuItems = [
@@ -465,11 +622,13 @@ export const ChatPage = () => {
       key: "profile",
       icon: <UserOutlined />,
       label: "Profile",
+      onClick: () => navigate("/profile"),
     },
     {
       key: "settings",
       icon: <SettingOutlined />,
       label: "Settings",
+      onClick: () => navigate("/profile?tab=settings"),
     },
     {
       type: "divider" as const,
@@ -479,6 +638,7 @@ export const ChatPage = () => {
       icon: <LogoutOutlined />,
       label: "Logout",
       danger: true,
+      onClick: handleLogout,
     },
   ];
 
@@ -522,16 +682,31 @@ export const ChatPage = () => {
 
             {/* Conversations Section */}
             <div className="sidebar-section">
-              <h3 className="section-title">Cuộc trò chuyện</h3>
+              <div className="section-header">
+                <h3 className="section-title">Conversations</h3>
+                {conversations.length > 0 && (
+                  <Button
+                    type="text"
+                    size="small"
+                    onClick={clearAllConversations}
+                    className="clear-all-btn"
+                    title="Delete all conversations"
+                  >
+                    🗑️
+                  </Button>
+                )}
+              </div>
 
-              <Button
-                type="text"
-                icon={<PlusOutlined />}
-                onClick={createNewConversation}
-                className="new-collection-btn"
-              >
-                Cuộc trò chuyện mới
-              </Button>
+              <Tooltip title="Create new conversation (Ctrl+N)" placement="bottom">
+                <Button
+                  type="text"
+                  icon={<PlusOutlined />}
+                  onClick={createNewConversation}
+                  className="new-collection-btn"
+                >
+                  New Conversation
+                </Button>
+              </Tooltip>
 
               <div className="conversations-list">
                 {conversations.map((conversation) => (
@@ -564,12 +739,27 @@ export const ChatPage = () => {
                           {
                             key: "edit",
                             icon: <EditOutlined />,
-                            label: "Rename",
+                            label: (
+                              <span>
+                                Rename
+                                <Text type="secondary" style={{ fontSize: '11px', marginLeft: '8px' }}>
+                                  Ctrl+R
+                                </Text>
+                              </span>
+                            ),
+                            onClick: () => openRenameModal(conversation.id),
                           },
                           {
                             key: "delete",
                             icon: <DeleteOutlined />,
-                            label: "Delete",
+                            label: (
+                              <span>
+                                Delete
+                                <Text type="secondary" style={{ fontSize: '11px', marginLeft: '8px' }}>
+                                  Ctrl+D
+                                </Text>
+                              </span>
+                            ),
                             danger: true,
                             onClick: () =>
                               deleteConversation(conversation.id),
@@ -589,6 +779,90 @@ export const ChatPage = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Generated Images Section */}
+            <div className="sidebar-section">
+              <div className="section-header">
+                <h3 className="section-title">Generated Images</h3>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  <Button
+                    type="text"
+                    size="small"
+                    onClick={fetchUserGeneratedImages}
+                    className="refresh-gallery-btn"
+                    loading={isLoadingImages}
+                    title="Refresh images"
+                  >
+                    🔄
+                  </Button>
+                  <Button
+                    type="text"
+                    size="small"
+                    onClick={() => setShowImageGallery(!showImageGallery)}
+                    className="toggle-gallery-btn"
+                  >
+                    {showImageGallery ? '⌄' : '›'}
+                  </Button>
+                </div>
+              </div>
+
+              {showImageGallery && (
+                <div className="generated-images-gallery">
+                  {isLoadingImages ? (
+                    <div className="loading-images">
+                      <LoadingOutlined spin />
+                      <span>Loading images...</span>
+                    </div>
+                  ) : userGeneratedImages.length > 0 ? (
+                    <div className="images-grid-sidebar">
+                      {userGeneratedImages.slice(0, 12).map((image) => (
+                        <div key={image.id} className="sidebar-image-item">
+                          <img
+                            src={imageApiUtils.getImageUrl(image, true)}
+                            alt={`Generated on ${new Date(image.createdAt).toLocaleDateString()}`}
+                            className="sidebar-image"
+                            onClick={() => addImageToChat(image)}
+                            loading="lazy"
+                          />
+                          <div className="image-overlay-sidebar">
+                            <Button
+                              type="text"
+                              size="small"
+                              icon={<PlusOutlined />}
+                              className="add-to-chat-btn"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                addImageToChat(image);
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="no-images">
+                      <Text className="no-images-text">
+                        No images generated yet
+                      </Text>
+                    </div>
+                  )}
+                  
+                  {userGeneratedImages.length > 12 && (
+                    <Button
+                      type="text"
+                      size="small"
+                      className="view-all-btn"
+                      onClick={() => {
+                        // TODO: Open full gallery modal
+                        message.info('Full gallery coming soon!');
+                      }}
+                    >
+                      View All ({userGeneratedImages.length})
+                    </Button>
+                  )}
+                </div>
+              )}
             </div>
 
 
@@ -729,51 +1003,107 @@ export const ChatPage = () => {
                       <div className="message-content">
                         <div className="message-bubble">
                           <div className="message-text">{message.content}</div>
-                          {/* Display generated images */}
+                          {/* Display generated images - PixelCut Style */}
                           {message.images && message.images.length > 0 && (
-                            <div className="message-images">
-                              {message.images.map((imageUrl, index) => (
-                                <div key={index} className="generated-image-container">
-                                  <img
-                                    src={imageUrl}
-                                    alt={`Generated image ${index + 1}`}
-                                    className="generated-image-preview"
-                                    onClick={() => window.open(imageUrl, '_blank')}
-                                  />
-                                  <div className="image-actions">
-                                    <div className="action-buttons">
-                                      <Tooltip title="Remove Background">
-                                        <Button 
-                                          className="action-btn remove-bg-btn"
-                                          icon={<ScissorOutlined />}
-                                          onClick={() => openPixelCutModal(imageUrl, 'removeBackground')}
+                            <div className="message-images pixelcut-style">
+                              <div className={`images-grid ${message.images.length === 1 ? 'single-image' : 'multiple-images'}`}>
+                                {message.images.map((imageUrl, index) => (
+                                  <div key={index} className="pixelcut-image-card">
+                                    <div className="image-card-container">
+                                      {/* Image Preview */}
+                                      <div className="image-preview-wrapper">
+                                        <img
+                                          src={imageUrl}
+                                          alt={`Generated image ${index + 1}`}
+                                          className="image-preview"
+                                          onClick={() => window.open(imageUrl, '_blank')}
                                         />
-                                      </Tooltip>
-                                      <Tooltip title="Generate Background">
-                                        <Button 
-                                          className="action-btn generate-bg-btn"
-                                          icon={<BgColorsOutlined />}
-                                          onClick={() => openPixelCutModal(imageUrl, 'generateBackground')}
-                                        />
-                                      </Tooltip>
-                                      <Tooltip title="Upscale Image">
-                                        <Button 
-                                          className="action-btn upscale-btn"
-                                          icon={<ExpandOutlined />}
-                                          onClick={() => openPixelCutModal(imageUrl, 'upscale')}
-                                        />
-                                      </Tooltip>
-                                      <Tooltip title="Download">
-                                        <Button 
-                                          className="action-btn download-btn"
-                                          icon={<DownloadOutlined />}
-                                          onClick={() => pixelcutUtils.downloadImage(imageUrl, `generated-image-${Date.now()}.png`)}
-                                        />
-                                      </Tooltip>
+                                        
+                                        {/* Image Overlay */}
+                                        <div className="image-overlay">
+                                          <div className="overlay-gradient"></div>
+                                          
+                                          {/* Quick Preview Button */}
+                                          <div className="quick-preview-btn">
+                                            <Button 
+                                              type="text" 
+                                              icon={<ExpandOutlined />}
+                                              onClick={() => window.open(imageUrl, '_blank')}
+                                              className="preview-btn"
+                                            />
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Action Bar */}
+                                      <div className="image-action-bar">
+                                        <div className="action-group primary-actions">
+                                          <Tooltip title="Remove Background" placement="top">
+                                            <Button 
+                                              className="pixelcut-action-btn remove-bg"
+                                              icon={<ScissorOutlined />}
+                                              onClick={() => openPixelCutModal(imageUrl, 'removeBackground')}
+                                            />
+                                          </Tooltip>
+                                          <Tooltip title="Generate Background" placement="top">
+                                            <Button 
+                                              className="pixelcut-action-btn generate-bg"
+                                              icon={<BgColorsOutlined />}
+                                              onClick={() => openPixelCutModal(imageUrl, 'generateBackground')}
+                                            />
+                                          </Tooltip>
+                                          <Tooltip title="Upscale Image" placement="top">
+                                            <Button 
+                                              className="pixelcut-action-btn upscale"
+                                              icon={<ExpandOutlined />}
+                                              onClick={() => openPixelCutModal(imageUrl, 'upscale')}
+                                            />
+                                          </Tooltip>
+                                        </div>
+                                        
+                                        <div className="action-group secondary-actions">
+                                          <Tooltip title="Download" placement="top">
+                                            <Button 
+                                              className="pixelcut-action-btn download"
+                                              icon={<DownloadOutlined />}
+                                              onClick={() => pixelcutUtils.downloadImage(imageUrl, `generated-image-${Date.now()}.png`)}
+                                            />
+                                          </Tooltip>
+                                        </div>
+                                      </div>
+
+                                      {/* Image Metadata */}
+                                      <div className="image-metadata">
+                                        <div className="metadata-info">
+                                          <span className="image-index">#{index + 1}</span>
+                                          <span className="image-status">Ready</span>
+                                        </div>
+                                      </div>
                                     </div>
                                   </div>
+                                ))}
+                              </div>
+                              
+                              {/* Image Collection Actions */}
+                              {message.images.length > 1 && (
+                                <div className="collection-actions">
+                                  <Button 
+                                    type="text" 
+                                    size="small"
+                                    icon={<DownloadOutlined />}
+                                    onClick={() => {
+                                      message.images?.forEach((url, i) => {
+                                        setTimeout(() => {
+                                          pixelcutUtils.downloadImage(url, `image-${i + 1}-${Date.now()}.png`);
+                                        }, i * 500);
+                                      });
+                                    }}
+                                    className="download-all-btn"
+                                  >
+                                    Download All ({message.images.length})
+                                  </Button>
                                 </div>
-                              ))}
+                              )}
                             </div>
                           )}
                         </div>
@@ -1205,6 +1535,167 @@ export const ChatPage = () => {
           display: none;
         }
 
+        /* Generated Images Gallery Styles */
+        .section-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 8px;
+        }
+
+        .toggle-gallery-btn {
+          color: #9ca3af !important;
+          font-size: 16px !important;
+          line-height: 1 !important;
+          padding: 0 !important;
+          min-width: 20px !important;
+          height: 20px !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .toggle-gallery-btn:hover {
+          color: #5c5c5e !important;
+          background: rgba(0, 0, 0, 0.05) !important;
+        }
+
+        .refresh-gallery-btn {
+          color: #9ca3af !important;
+          font-size: 14px !important;
+          line-height: 1 !important;
+          padding: 0 !important;
+          min-width: 20px !important;
+          height: 20px !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .refresh-gallery-btn:hover {
+          color: #3b82f6 !important;
+          background: rgba(59, 130, 246, 0.1) !important;
+          transform: rotate(180deg) !important;
+        }
+
+        .clear-all-btn {
+          color: #9ca3af !important;
+          font-size: 14px !important;
+          line-height: 1 !important;
+          padding: 0 !important;
+          min-width: 20px !important;
+          height: 20px !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .clear-all-btn:hover {
+          color: #ef4444 !important;
+          background: rgba(239, 68, 68, 0.1) !important;
+          transform: scale(1.1) !important;
+        }
+
+        .generated-images-gallery {
+          margin-top: 8px;
+        }
+
+        .loading-images {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 8px;
+          padding: 16px;
+          color: #9ca3af;
+          font-size: 12px;
+        }
+
+        .images-grid-sidebar {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .sidebar-image-item {
+          position: relative;
+          aspect-ratio: 1;
+          border-radius: 6px;
+          overflow: hidden;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          border: 1px solid #e5e7eb;
+        }
+
+        .sidebar-image-item:hover {
+          transform: scale(1.05);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+          border-color: #3b82f6;
+        }
+
+        .sidebar-image {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+          transition: transform 0.2s ease;
+        }
+
+        .image-overlay-sidebar {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.7);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
+        .sidebar-image-item:hover .image-overlay-sidebar {
+          opacity: 1;
+        }
+
+        .add-to-chat-btn {
+          color: white !important;
+          background: rgba(59, 130, 246, 0.8) !important;
+          border-radius: 50% !important;
+          width: 24px !important;
+          height: 24px !important;
+          min-width: 24px !important;
+          padding: 0 !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .add-to-chat-btn:hover {
+          background: #3b82f6 !important;
+          transform: scale(1.1) !important;
+        }
+
+        .no-images {
+          text-align: center;
+          padding: 20px 12px;
+          color: #9ca3af;
+        }
+
+        .no-images-text {
+          font-size: 12px;
+          color: #9ca3af;
+        }
+
+        .view-all-btn {
+          width: 100%;
+          text-align: center;
+          color: #6366f1 !important;
+          font-size: 12px !important;
+          padding: 4px 8px !important;
+          height: auto !important;
+          margin-top: 8px;
+          border-radius: 6px !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .view-all-btn:hover {
+          background: rgba(99, 102, 241, 0.1) !important;
+          color: #4f46e5 !important;
+        }
+
         .conversation-item {
           padding: 8px 12px;
           border-radius: 8px;
@@ -1436,44 +1927,252 @@ export const ChatPage = () => {
           border-radius: 8px;
         }
 
-        .message-images {
-          margin-top: 12px;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
+        /* PixelCut Style Image Display */
+        .message-images.pixelcut-style {
+          margin-top: 16px;
+          background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+          border-radius: 16px;
+          padding: 16px;
+          border: 1px solid #e2e8f0;
         }
 
-        .generated-image-container {
-          position: relative;
+        .images-grid {
+          display: grid;
+          gap: 16px;
+          width: 100%;
+        }
+
+        .images-grid.single-image {
+          grid-template-columns: 1fr;
+          max-width: 500px;
+        }
+
+        .images-grid.multiple-images {
+          grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+          max-width: 800px;
+        }
+
+        .pixelcut-image-card {
+          background: white;
           border-radius: 12px;
           overflow: hidden;
-          max-width: 400px;
-          cursor: pointer;
-          transition: all 0.2s ease;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border: 1px solid #e2e8f0;
         }
 
-        .generated-image-container:hover {
-          transform: scale(1.02);
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        .pixelcut-image-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+          border-color: #3b82f6;
         }
 
-        .generated-image-preview {
+        .image-card-container {
+          position: relative;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .image-preview-wrapper {
+          position: relative;
+          background: #f8fafc;
+          overflow: hidden;
+        }
+
+        .image-preview {
           width: 100%;
           height: auto;
-          display: block;
-          border-radius: 12px;
+          min-height: 200px;
+          object-fit: cover;
+          cursor: pointer;
+          transition: transform 0.3s ease;
         }
 
-        .image-actions {
+        .image-preview:hover {
+          transform: scale(1.05);
+        }
+
+        .image-overlay {
           position: absolute;
-          top: 8px;
-          right: 8px;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
           opacity: 0;
-          transition: opacity 0.2s ease;
+          transition: opacity 0.3s ease;
+          pointer-events: none;
         }
 
-        .generated-image-container:hover .image-actions {
+        .pixelcut-image-card:hover .image-overlay {
           opacity: 1;
+          pointer-events: auto;
+        }
+
+        .overlay-gradient {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: linear-gradient(
+            135deg,
+            rgba(59, 130, 246, 0.1) 0%,
+            rgba(147, 51, 234, 0.1) 100%
+          );
+          backdrop-filter: blur(1px);
+        }
+
+        .quick-preview-btn {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+        }
+
+        .preview-btn {
+          width: 40px !important;
+          height: 40px !important;
+          border-radius: 50% !important;
+          background: rgba(255, 255, 255, 0.9) !important;
+          backdrop-filter: blur(10px) !important;
+          color: #374151 !important;
+          border: 1px solid rgba(255, 255, 255, 0.8) !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .preview-btn:hover {
+          background: white !important;
+          color: #3b82f6 !important;
+          transform: scale(1.1) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .image-action-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 12px 16px;
+          background: white;
+          border-top: 1px solid #f1f5f9;
+        }
+
+        .action-group {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+        }
+
+        .pixelcut-action-btn {
+          width: 36px !important;
+          height: 36px !important;
+          min-width: 36px !important;
+          border-radius: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          border: 1px solid !important;
+          transition: all 0.2s ease !important;
+          font-weight: 500 !important;
+        }
+
+        .pixelcut-action-btn.remove-bg {
+          color: #ef4444 !important;
+          background: rgba(239, 68, 68, 0.1) !important;
+          border-color: rgba(239, 68, 68, 0.2) !important;
+        }
+
+        .pixelcut-action-btn.remove-bg:hover {
+          background: #ef4444 !important;
+          color: white !important;
+          border-color: #ef4444 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+        }
+
+        .pixelcut-action-btn.generate-bg {
+          color: #3b82f6 !important;
+          background: rgba(59, 130, 246, 0.1) !important;
+          border-color: rgba(59, 130, 246, 0.2) !important;
+        }
+
+        .pixelcut-action-btn.generate-bg:hover {
+          background: #3b82f6 !important;
+          color: white !important;
+          border-color: #3b82f6 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3) !important;
+        }
+
+        .pixelcut-action-btn.upscale {
+          color: #10b981 !important;
+          background: rgba(16, 185, 129, 0.1) !important;
+          border-color: rgba(16, 185, 129, 0.2) !important;
+        }
+
+        .pixelcut-action-btn.upscale:hover {
+          background: #10b981 !important;
+          color: white !important;
+          border-color: #10b981 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        }
+
+        .pixelcut-action-btn.download {
+          color: #8b5cf6 !important;
+          background: rgba(139, 92, 246, 0.1) !important;
+          border-color: rgba(139, 92, 246, 0.2) !important;
+        }
+
+        .pixelcut-action-btn.download:hover {
+          background: #8b5cf6 !important;
+          color: white !important;
+          border-color: #8b5cf6 !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3) !important;
+        }
+
+        .image-metadata {
+          padding: 8px 16px;
+          background: #f8fafc;
+          border-top: 1px solid #f1f5f9;
+        }
+
+        .metadata-info {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 11px;
+          color: #64748b;
+        }
+
+        .image-index {
+          font-weight: 600;
+          color: #3b82f6;
+        }
+
+        .image-status {
+          padding: 2px 8px;
+          background: #dcfce7;
+          color: #166534;
+          border-radius: 12px;
+          font-weight: 500;
+        }
+
+        .collection-actions {
+          margin-top: 12px;
+          padding-top: 12px;
+          border-top: 1px solid #e2e8f0;
+          text-align: center;
+        }
+
+        .download-all-btn {
+          color: #6366f1 !important;
+          font-weight: 500 !important;
+          transition: all 0.2s ease !important;
+        }
+
+        .download-all-btn:hover {
+          color: #4f46e5 !important;
+          background: rgba(99, 102, 241, 0.1) !important;
         }
 
         .download-image-btn {
@@ -2054,6 +2753,58 @@ export const ChatPage = () => {
             width: 50px;
             height: 50px;
           }
+
+          /* PixelCut Style Mobile Responsiveness */
+          .message-images.pixelcut-style {
+            padding: 12px;
+          }
+
+          .images-grid.multiple-images {
+            grid-template-columns: 1fr;
+          }
+
+          .images-grid.single-image {
+            max-width: 100%;
+          }
+
+          .pixelcut-image-card {
+            border-radius: 8px;
+          }
+
+          .image-preview {
+            min-height: 160px;
+          }
+
+          .image-action-bar {
+            padding: 8px 12px;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .action-group {
+            gap: 6px;
+          }
+
+          .pixelcut-action-btn {
+            width: 32px !important;
+            height: 32px !important;
+            min-width: 32px !important;
+          }
+
+          .quick-preview-btn {
+            top: 8px;
+            right: 8px;
+          }
+
+          .preview-btn {
+            width: 36px !important;
+            height: 36px !important;
+          }
+
+          .collection-actions {
+            margin-top: 8px;
+            padding-top: 8px;
+          }
         }
 
         @media (max-width: 480px) {
@@ -2604,6 +3355,34 @@ export const ChatPage = () => {
               </div>
             </div>
           </Card>
+        </div>
+      </Modal>
+
+      {/* Rename Conversation Modal */}
+      <Modal
+        title="Rename Conversation"
+        open={renameModalVisible}
+        onOk={handleRenameConversation}
+        onCancel={() => {
+          setRenameModalVisible(false);
+          setConversationToRename(null);
+          setNewConversationTitle("");
+        }}
+        okText="Save"
+        cancelText="Cancel"
+        width={400}
+      >
+        <div style={{ margin: '16px 0' }}>
+          <Text>Enter new name for the conversation:</Text>
+          <Input
+            value={newConversationTitle}
+            onChange={(e) => setNewConversationTitle(e.target.value)}
+            onPressEnter={handleRenameConversation}
+            placeholder="Conversation name..."
+            maxLength={100}
+            showCount
+            style={{ marginTop: '8px' }}
+          />
         </div>
       </Modal>
     </div>
