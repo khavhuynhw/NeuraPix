@@ -4,22 +4,18 @@ import {
   Row,
   Col,
   Typography,
-  Spin,
   message,
   Tag,
   Space,
   Button,
-  Modal,
 } from "antd";
 import {
   DollarOutlined,
   TransactionOutlined,
   ClockCircleOutlined,
-  CloseCircleOutlined,
   RiseOutlined,
   EyeOutlined,
   DownloadOutlined,
-  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import StatCard from "../../components/admin/StatCard";
 import DataTable from "../../components/admin/shared/DataTable";
@@ -226,7 +222,7 @@ const TransactionManagement: React.FC = () => {
       title: 'Amount',
       dataIndex: 'amount',
       key: 'amount',
-      render: (amount: number, record: Transaction) => 
+      render: (amount: number) => 
         formatVND(amount),
     },
     {
@@ -261,7 +257,7 @@ const TransactionManagement: React.FC = () => {
     {
       title: 'Actions',
       key: 'actions',
-      render: (_, record: Transaction) => (
+      render: (_: any, record: Transaction) => (
         <Space>
           <Button
             type="text"
@@ -308,7 +304,7 @@ const TransactionManagement: React.FC = () => {
       title: 'Transaction Details',
       fields: [
         { label: 'Order Code', key: 'orderCode' },
-        { label: 'Amount', key: 'amount', render: (value: number, record: Transaction) => 
+        { label: 'Amount', key: 'amount', render: (value: number) => 
           formatVND(value) },
         { label: 'Currency', key: 'currency' },
         { label: 'Status', key: 'status', render: (status: string) => (

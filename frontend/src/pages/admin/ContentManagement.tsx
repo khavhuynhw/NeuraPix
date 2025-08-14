@@ -9,7 +9,6 @@ import {
   Space,
   Tag,
   Image,
-  Modal,
   Row,
   Col,
   Statistic,
@@ -18,8 +17,6 @@ import {
   Upload,
 } from "antd";
 import {
-  PictureOutlined,
-  SearchOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EyeOutlined,
@@ -105,11 +102,9 @@ const mockContent: ContentItem[] = [
 const ContentManagement = () => {
   const [content, setContent] = useState<ContentItem[]>(mockContent);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterModel, setFilterModel] = useState<string>("all");
   const [selectedItems, setSelectedItems] = useState<React.Key[]>([]);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const stats = {
     total: content.length,
@@ -362,7 +357,6 @@ const ContentManagement = () => {
           <Col xs={24} sm={8}>
             <Search
               placeholder="Search by prompt, user, or tags..."
-              onSearch={setSearchText}
               style={{ width: "100%" }}
               allowClear
             />

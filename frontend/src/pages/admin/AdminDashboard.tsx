@@ -239,10 +239,10 @@ const AdminDashboard = () => {
             <Select
               value={timeRange}
               onChange={setTimeRange}
-              style={{ width: 120 }}
               size="middle"
               bordered={false}
               style={{
+                width: 120,
                 background: "#ffffff",
                 borderRadius: 8,
                 border: "1px solid #e2e8f0"

@@ -21,8 +21,6 @@ import {
 } from "antd";
 import { formatVND } from "../../utils/currency";
 import {
-  AppstoreOutlined,
-  SearchOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -41,7 +39,6 @@ const { Option } = Select;
 const PlanManagement = () => {
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [filterTier, setFilterTier] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedPlans, setSelectedPlans] = useState<React.Key[]>([]);
@@ -123,8 +120,7 @@ const PlanManagement = () => {
     fetchPlans();
   }, [fetchPlans]);
 
-  const handleSearch = (value: string) => {
-    setSearchText(value);
+  const handleSearch = (_: string) => {
     setPagination(prev => ({ ...prev, current: 1 }));
   };
 
