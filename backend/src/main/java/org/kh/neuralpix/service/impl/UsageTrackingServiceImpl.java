@@ -98,7 +98,7 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     @Override
     public void trackImageGenerationUsage(String username, int count) {
         try {
-            var user = userService.findByUsername(username);
+            var user = userService.findByEmail(username);
             if (user.isPresent()) {
                 for (int i = 0; i < count; i++) {
                     trackImageGeneration(user.get().getId());
@@ -114,7 +114,7 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     @Override
     public void trackChatUsage(String username) {
         try {
-            var user = userService.findByUsername(username);
+            var user = userService.findByEmail(username);
             if (user.isPresent()) {
                 LocalDate today = LocalDate.now();
                 // Track chat usage as a different type or use existing image generation tracking
