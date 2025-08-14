@@ -72,7 +72,7 @@ export const pixelcutApi = {
       return response.data;
     } catch (error: any) {
       console.error('Error generating image:', error);
-      throw new Error(error.response?.data?.errorMessage || 'Failed to generate image');
+      throw new Error(error.response?.data?.errorMessage);
     }
   },
 
@@ -84,7 +84,7 @@ export const pixelcutApi = {
       return response.data;
     } catch (error: any) {
       console.error('Error removing background:', error);
-      throw new Error(error.response?.data?.errorMessage || 'Failed to remove background');
+      throw new Error(error.response?.data?.errorMessage);
     }
   },
 
@@ -101,7 +101,7 @@ export const pixelcutApi = {
       return response.data;
     } catch (error: any) {
       console.error('Error generating background:', error);
-      throw new Error(error.response?.data?.errorMessage || 'Failed to generate background');
+      throw new Error(error.response?.data?.errorMessage);
     }
   },
 
@@ -117,7 +117,7 @@ export const pixelcutApi = {
       return response.data;
     } catch (error: any) {
       console.error('Error upscaling image:', error);
-      throw new Error(error.response?.data?.errorMessage || 'Failed to upscale image');
+      throw new Error(error.response?.data?.errorMessage);
     }
   },
 
