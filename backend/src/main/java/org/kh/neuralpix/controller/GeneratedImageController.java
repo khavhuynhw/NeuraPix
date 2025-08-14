@@ -16,7 +16,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/images")
-@CrossOrigin(origins = {"http://localhost:5173"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "https://neura-pix-chi.vercel.app"}, allowCredentials = "true")
 public class GeneratedImageController {
 
     private static final Logger logger = LoggerFactory.getLogger(GeneratedImageController.class);

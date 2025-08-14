@@ -25,7 +25,7 @@ public class PaymentConfig {
     
     @Data
     public static class Frontend {
-        private String baseUrl = "http://localhost:5173";
+        private String baseUrl = "https://neura-pix-chi.vercel.app";
         private String subscriptionSuccessPath = "/subscription/success";
         private String subscriptionCancelPath = "/subscription/cancel";
         private String paymentSuccessPath = "/payment/success";

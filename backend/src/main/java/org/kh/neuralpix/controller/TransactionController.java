@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/v2/transactions")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = {"http://localhost:5173"}, allowCredentials = "true")
+@CrossOrigin(origins = {"http://localhost:5173", "https://neura-pix-chi.vercel.app"}, allowCredentials = "true")
 public class TransactionController {
 
     private final TransactionService transactionService;
