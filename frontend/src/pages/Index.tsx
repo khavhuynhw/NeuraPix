@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { Typography, Card, Row, Col, Rate, Avatar, Space, Button } from "antd";
+import { Typography, Card, Row, Col, Rate, Avatar, Space } from "antd";
 import { QuestionCircleOutlined, RightOutlined } from "@ant-design/icons";
 
 import { HeroSection } from "../components/HeroSection";

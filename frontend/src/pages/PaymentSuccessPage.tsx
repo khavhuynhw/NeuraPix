@@ -75,15 +75,6 @@ const PaymentSuccessPage: React.FC = () => {
     }).format(amount);
   };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString('vi-VN', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   const handleContinue = () => {
     if (subscription) {
@@ -183,18 +174,6 @@ const PaymentSuccessPage: React.FC = () => {
                   <dt className="text-sm font-medium text-gray-500">Description</dt>
                   <dd className="text-sm text-gray-900">{paymentInfo.description}</dd>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Payment Date</dt>
-                  <dd className="text-sm text-gray-900">
-                    {formatDate(paymentInfo.transactionDateTime)}
-                  </dd>
-                </div>
-                {paymentInfo.reference && (
-                  <div className="sm:col-span-2">
-                    <dt className="text-sm font-medium text-gray-500">Reference</dt>
-                    <dd className="text-sm text-gray-900 font-mono">{paymentInfo.reference}</dd>
-                  </div>
-                )}
               </div>
             </div>
           )}

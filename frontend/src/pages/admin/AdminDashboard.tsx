@@ -180,7 +180,7 @@ const AdminDashboard = () => {
   ];
 
   // Transform recent users data for table
-  const usersTableData = recentUsers.map((user, index) => ({
+  const usersTableData = recentUsers.map((user) => ({
     key: user.id.toString(),
     ...user,
   }));

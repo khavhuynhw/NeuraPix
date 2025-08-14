@@ -11,13 +11,10 @@ import {
   Result, 
   Descriptions,
   Tag,
-  Divider,
-  Alert,
   Timeline
 } from 'antd';
 import { 
   CheckCircleOutlined, 
-  CloseCircleOutlined, 
   ReloadOutlined,
   RocketOutlined,
   DashboardOutlined,
@@ -115,16 +112,6 @@ const SubscriptionSuccessPage: React.FC = () => {
     }
   };
 
-  const getTierColor = (tier: string): string => {
-    switch (tier.toLowerCase()) {
-      case 'basic':
-        return 'from-blue-500 to-blue-600';
-      case 'premium':
-        return 'from-purple-500 to-purple-600';
-      default:
-        return 'from-gray-500 to-gray-600';
-    }
-  };
 
   const getTierFeatures = (tier: string): string[] => {
     switch (tier.toLowerCase()) {
