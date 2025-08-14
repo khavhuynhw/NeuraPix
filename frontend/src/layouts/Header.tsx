@@ -18,23 +18,9 @@ interface HeaderProps {
   onGetStarted?: () => void;
 }
 
-export const Header = ({ onGetStarted }: HeaderProps) => {
+export const Header = ({}: HeaderProps) => {
   const navigate = useNavigate();
   const { user, isAuthenticated, logout } = useAuth();
-
-  const handleGetStarted = () => {
-    if (onGetStarted) {
-      onGetStarted();
-    } else {
-      // Default scroll to generator section
-      const generatorSection = document.getElementById("generator");
-      generatorSection?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    }
-  };
-
   const handleLogout = () => {
     logout();
     navigate("/");

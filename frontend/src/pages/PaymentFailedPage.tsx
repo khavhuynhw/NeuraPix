@@ -57,9 +57,6 @@ const PaymentFailedPage: React.FC = () => {
     if (errorReason) {
       return decodeURIComponent(errorReason);
     }
-    if (paymentInfo?.desc) {
-      return paymentInfo.desc;
-    }
     return 'The payment could not be processed. Please try again.';
   };
 
@@ -169,12 +166,7 @@ const PaymentFailedPage: React.FC = () => {
                     </span>
                   </dd>
                 </div>
-                {paymentInfo.code && (
-                  <div className="sm:col-span-2">
-                    <dt className="text-sm font-medium text-gray-500">Error Code</dt>
-                    <dd className="text-sm text-gray-900 font-mono">{paymentInfo.code}</dd>
-                  </div>
-                )}
+            
               </div>
             </div>
           )}

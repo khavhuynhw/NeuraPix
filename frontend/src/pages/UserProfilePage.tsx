@@ -160,23 +160,6 @@ export const UserProfilePage = () => {
     }
   };
 
-  const handleUpgradePlan = () => {
-    if (!subscription?.id) {
-      // No active subscription, redirect to pricing page
-      navigate('/pricing');
-      return;
-    }
-
-    // Check if already at highest tier
-    if (subscription.tier === 'PREMIUM') {
-      message.info("You're already on the highest tier!");
-      return;
-    }
-
-    // Open upgrade payment modal
-    setUpgradePaymentModalVisible(true);
-  };
-
   const handleUpgradeSuccess = async () => {
     // Refresh subscription data after successful upgrade
     if (currentUser?.id) {

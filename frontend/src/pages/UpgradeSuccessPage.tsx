@@ -11,7 +11,6 @@ import {
   Result, 
   Descriptions,
   Tag,
-  Divider,
   Alert,
   Timeline
 } from 'antd';
@@ -21,13 +20,12 @@ import {
   CrownOutlined,
   DashboardOutlined,
   RocketOutlined,
-  CalendarOutlined
 } from '@ant-design/icons';
 import { paymentApi, type PaymentInfo } from '../services/paymentApi';
 import { subscriptionApi, type Subscription } from '../services/subscriptionApi';
 import { useAuth } from '../context/AuthContext';
 
-const { Title, Paragraph, Text } = Typography;
+const { Title, Text } = Typography;
 
 const UpgradeSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams();

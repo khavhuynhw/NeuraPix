@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef  } from "react";
 import {
   Row,
   Col,
@@ -9,15 +9,12 @@ import {
   Input,
   Select,
   Slider,
-  Upload,
   Space,
   Divider,
   Image,
   Tag,
   Progress,
-  Tooltip,
   Modal,
-  Alert,
   Badge,
   Spin,
   message,
@@ -25,21 +22,16 @@ import {
 
 import {
   PictureOutlined,
-  UploadOutlined,
   DownloadOutlined,
   HeartOutlined,
   HeartFilled,
   ShareAltOutlined,
   StarOutlined,
   ReloadOutlined,
-  SettingOutlined,
   BulbOutlined,
   FireOutlined,
   ThunderboltOutlined,
-  EyeOutlined,
-  CopyOutlined,
   DeleteOutlined,
-  ExpandOutlined,
   CrownOutlined,
   TrophyOutlined,
   StarFilled,
@@ -877,7 +869,7 @@ export const GeneratorPage = () => {
               </Card>
             ) : (
               <Row gutter={[20, 20]}>
-                {generatedImages.map((image, index) => (
+                {generatedImages.map((image) => (
                   <Col xs={12} sm={8} md={6} key={image.id}>
                     <Card
                       hoverable

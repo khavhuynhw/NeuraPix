@@ -1,4 +1,4 @@
-import { Row, Col, Card, Typography, Space, Button, Badge, Progress } from "antd";
+import { Row, Col, Card, Typography, Space, Button, Badge } from "antd";
 import {
   ThunderboltOutlined,
   BgColorsOutlined,
@@ -13,9 +13,6 @@ import {
   StarOutlined,
   RocketOutlined,
   TrophyOutlined,
-  FireOutlined,
-  HeartOutlined,
-  EyeOutlined,
   CloudOutlined,
   IeOutlined,
   CustomerServiceOutlined,

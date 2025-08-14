@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Card,
   Typography,
@@ -15,12 +14,11 @@ import {
   message,
 } from "antd";
 import {
-  SettingOutlined,
   SaveOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
