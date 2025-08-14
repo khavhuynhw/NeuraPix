@@ -173,7 +173,7 @@ export const Header = ({}: HeaderProps) => {
               }}
             >
               <img
-                src="public/LOGO-01-01.png"
+                src="/LOGO-01-01.png"
                 alt="NEURAPIX"
                 style={{
                   height: 64,
