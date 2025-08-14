@@ -37,7 +37,6 @@ import {
   SecurityScanOutlined,
   CreditCardOutlined,
   DownloadOutlined,
-  HeartOutlined,
   LoadingOutlined,
   HistoryOutlined,
   PhoneOutlined,
@@ -51,6 +50,7 @@ import { avatarApi } from "../services/avatarApi";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
 import { UpgradePaymentModal } from "../components/UpgradePaymentModal";
 import { transactionApi } from "../services/transactionApi";
+import { usageApi, type MonthlyUsageResponse } from "../services/usageApi";
 import type { User } from "../types/auth";
 import type { Transaction } from "../types/transaction";
 
@@ -72,6 +72,9 @@ export const UserProfilePage = () => {
     totalLimit: 0,
     imagesRemaining: 0,
   });
+  
+  // Monthly usage state
+  const [monthlyUsage, setMonthlyUsage] = useState<MonthlyUsageResponse | null>(null);
   
   // Avatar upload states
   const [avatarUploading, setAvatarUploading] = useState(false);
@@ -103,6 +106,7 @@ export const UserProfilePage = () => {
           if (fetchedUser.id) {
             await fetchSubscriptionData(fetchedUser.id);
             await fetchUserStats(fetchedUser.id);
+            await fetchMonthlyUsage(fetchedUser.id);
             await fetchUserTransactions(fetchedUser.id);
           }
           
@@ -146,6 +150,24 @@ export const UserProfilePage = () => {
     }
   };
 
+  const fetchMonthlyUsage = async (userId: number) => {
+    try {
+      const monthlyUsageData = await usageApi.getMonthlyUsage(userId);
+      setMonthlyUsage(monthlyUsageData);
+      
+      // Update stats with real monthly usage data
+      setStats(prevStats => ({
+        ...prevStats,
+        imagesGenerated: monthlyUsageData.usage,
+        imagesRemaining: monthlyUsageData.remaining,
+        totalLimit: monthlyUsageData.remaining === -1 ? -1 : monthlyUsageData.usage + monthlyUsageData.remaining,
+      }));
+    } catch (error) {
+      console.error("Failed to fetch monthly usage:", error);
+      // Don't show error message to user - fallback to mock data
+    }
+  };
+
   const fetchUserTransactions = async (userId: number, page: number = 0) => {
     try {
       setTransactionLoading(true);
@@ -164,6 +186,7 @@ export const UserProfilePage = () => {
     // Refresh subscription data after successful upgrade
     if (currentUser?.id) {
       await fetchSubscriptionData(currentUser.id);
+      await fetchMonthlyUsage(currentUser.id);
       await fetchUserTransactions(currentUser.id);
     }
     setUpgradePaymentModalVisible(false);
@@ -493,7 +516,7 @@ export const UserProfilePage = () => {
           <TabPane key="overview" tab="Overview">
             <Row gutter={[24, 24]}>
               {/* Stats Cards */}
-              <Col xs={24} md={8}>
+              <Col xs={24} md={12}>
                 <Card
                   style={{
                     textAlign: "center",
@@ -509,41 +532,7 @@ export const UserProfilePage = () => {
                   />
                 </Card>
               </Col>
-              <Col xs={24} md={8}>
-                <Card
-                  style={{
-                    textAlign: "center",
-                    borderRadius: 12,
-                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.05)",
-                  }}
-                >
-                  <Statistic
-                    title="Favorites"
-                    value={userProfile.favoriteImages}
-                    prefix={<HeartOutlined style={{ color: "#ff4d4f" }} />}
-                    valueStyle={{ color: "#ff4d4f", fontSize: 24, fontWeight: 700 }}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} md={8}>
-                <Card
-                  style={{
-                    textAlign: "center",
-                    borderRadius: 12,
-                    boxShadow: "0 4px 16px rgba(0, 0, 0, 0.05)",
-                  }}
-                >
-                  <Statistic
-                    title="Downloads"
-                    value={userProfile.downloadsThisMonth}
-                    prefix={<DownloadOutlined style={{ color: "#52c41a" }} />}
-                    valueStyle={{ color: "#52c41a", fontSize: 24, fontWeight: 700 }}
-                  />
-                </Card>
-              </Col>
-
-              {/* Usage Progress */}
-              <Col span={24}>
+              <Col xs={24} md={12}>
                 <Card
                   title="Monthly Usage"
                   style={{
@@ -551,22 +540,51 @@ export const UserProfilePage = () => {
                     boxShadow: "0 4px 16px rgba(0, 0, 0, 0.05)",
                   }}
                 >
-                  <div style={{ marginBottom: 16 }}>
+                  <Row gutter={[16, 16]}>
+                    <Col xs={24} sm={12}>
+                      <Statistic
+                        title="Images This Month"
+                        value={monthlyUsage?.usage ?? userProfile.imagesGenerated}
+                        valueStyle={{ color: "#0079FF", fontSize: 20, fontWeight: 600 }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Statistic
+                        title="Remaining"
+                        value={
+                          monthlyUsage?.remaining === -1 ? "Unlimited" : 
+                          (monthlyUsage?.remaining ?? userProfile.imagesRemaining)
+                        }
+                        valueStyle={{ 
+                          color: (monthlyUsage?.remaining ?? userProfile.imagesRemaining) === -1 ? "#52c41a" : "#0079FF", 
+                          fontSize: 20, 
+                          fontWeight: 600 
+                        }}
+                      />
+                    </Col>
+                  </Row>
+                  <div style={{ marginTop: 16 }}>
                     <Progress
                       percent={
-                        (userProfile.imagesGenerated / userProfile.totalLimit) * 100
+                        monthlyUsage ? 
+                          (monthlyUsage.remaining === -1 ? 0 : 
+                           Math.min((monthlyUsage.usage / (monthlyUsage.usage + monthlyUsage.remaining)) * 100, 100)) :
+                          (userProfile.totalLimit === -1 ? 0 : 
+                           Math.min((userProfile.imagesGenerated / userProfile.totalLimit) * 100, 100))
                       }
                       strokeColor="#0079FF"
                       trailColor="#f0f0f0"
-                      strokeWidth={12}
-                      style={{ marginBottom: 8 }}
+                      strokeWidth={8}
+                      format={() => 
+                        monthlyUsage ? 
+                          (monthlyUsage.remaining === -1 ? "Unlimited" : `${monthlyUsage.remaining} left`) :
+                          (userProfile.totalLimit === -1 ? "Unlimited" : `${userProfile.imagesRemaining} left`)
+                      }
                     />
-                    <Text style={{ color: "#0079FF", fontWeight: 600 }}>
-                      {userProfile.imagesRemaining} images remaining
-                    </Text>
                   </div>
                 </Card>
               </Col>
+
 
               {/* Credits Information */}
               <Col span={24}>
