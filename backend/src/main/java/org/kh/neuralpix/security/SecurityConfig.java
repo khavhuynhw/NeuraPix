@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints
-                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("api/v1/auth/**").permitAll()
                         
                         // Swagger UI endpoints (should be restricted in production)
                         .requestMatchers("/v3/api-docs/**").permitAll()
