@@ -1,5 +1,5 @@
 /.idea/
 backend/src/.env
 backend/.env
-/frontend/.env
+
 frontend/.claude/settings.local.json

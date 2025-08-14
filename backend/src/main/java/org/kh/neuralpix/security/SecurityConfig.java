@@ -46,7 +46,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
                         // Public authentication endpoints
-                        .requestMatchers("api/v1/auth/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         
                         // Swagger UI endpoints (should be restricted in production)
                         .requestMatchers("/v3/api-docs/**").permitAll()
@@ -56,6 +56,7 @@ public class SecurityConfig {
                         .requestMatchers("/webjars/**").permitAll()
                         
                         // Payment webhook endpoints (external system callbacks)
+                        .requestMatchers("/api/v2/payments/payos/webhook2").permitAll()
                         .requestMatchers("/api/v2/payments/payos/webhook/**").permitAll()
                         .requestMatchers("/api/v2/payments/payos/return/**").permitAll()
                         .requestMatchers("/api/v2/payments/payos/cancel/**").permitAll()
