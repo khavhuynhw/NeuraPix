@@ -290,13 +290,13 @@ public class TransactionController {
             response.put("success", true);
             response.put("data", transactionDtos);
             response.put("total", transactionDtos.size());
-            response.put("filters", Map.of(
-                "userId", userId,
-                "startDate", start,
-                "endDate", end,
-                "status", status,
-                "type", type
-            ));
+            Map<String, Object> filters = new HashMap<>();
+            filters.put("userId", userId);
+            filters.put("startDate", start);
+            filters.put("endDate", end);
+            filters.put("status", status);
+            filters.put("type", type);
+            response.put("filters", filters);
             
             return ResponseEntity.ok(response);
             

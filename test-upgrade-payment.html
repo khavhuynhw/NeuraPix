@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Upgrade Payment</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .container { max-width: 600px; margin: 0 auto; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 10px; margin-bottom: 10px; }
+        button { background-color: #007bff; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .result { margin-top: 20px; padding: 15px; border: 1px solid #ddd; background-color: #f9f9f9; }
+        .error { border-color: #dc3545; background-color: #f8d7da; }
+        .success { border-color: #28a745; background-color: #d4edda; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Test Upgrade Payment API</h1>
+        
+        <form id="upgradeForm">
+            <div class="form-group">
+                <label for="userId">User ID:</label>
+                <input type="number" id="userId" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="subscriptionId">Subscription ID:</label>
+                <input type="number" id="subscriptionId" value="1" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="currentTier">Current Tier:</label>
+                <select id="currentTier" required>
+                    <option value="FREE">FREE</option>
+                    <option value="BASIC" selected>BASIC</option>
+                    <option value="PREMIUM">PREMIUM</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="newTier">New Tier:</label>
+                <select id="newTier" required>
+                    <option value="BASIC">BASIC</option>
+                    <option value="PREMIUM" selected>PREMIUM</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="upgradeAmount">Upgrade Amount (VND):</label>
+                <input type="number" id="upgradeAmount" value="3000" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="buyerEmail">Buyer Email:</label>
+                <input type="email" id="buyerEmail" value="test@example.com" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="buyerName">Buyer Name:</label>
+                <input type="text" id="buyerName" value="Test User">
+            </div>
+            
+            <button type="submit">Test Upgrade Payment</button>
+        </form>
+        
+        <div id="result" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        document.getElementById('upgradeForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.innerHTML = 'Testing upgrade payment...';
+            
+            const formData = {
+                userId: parseInt(document.getElementById('userId').value),
+                subscriptionId: parseInt(document.getElementById('subscriptionId').value),
+                currentTier: document.getElementById('currentTier').value,
+                newTier: document.getElementById('newTier').value,
+                upgradeAmount: parseInt(document.getElementById('upgradeAmount').value),
+                description: `Upgrade from ${document.getElementById('currentTier').value} to ${document.getElementById('newTier').value}`,
+                buyerEmail: document.getElementById('buyerEmail').value,
+                buyerName: document.getElementById('buyerName').value,
+                reason: "User-requested upgrade via payment",
+                upgradeImmediately: true
+            };
+            
+            try {
+                const response = await fetch('http://localhost:5173/api/v2/payments/payos/create-upgrade-payment', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer dummy_token' // For testing
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ Success!</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Error (${response.status})</h3>
+                        <pre>${JSON.stringify(result, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `
+                    <h3>❌ Network Error</h3>
+                    <p>${error.message}</p>
+                    <p>Make sure the backend server is running on port 8080</p>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

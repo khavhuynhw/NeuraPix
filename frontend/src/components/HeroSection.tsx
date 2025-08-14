@@ -125,7 +125,7 @@ export const HeroSection = ({ onGetStarted }: HeroSectionProps) => {
 
               {/* CTA Buttons */}
               <Space size="large" wrap>
-                <Link to="/generator">
+                <Link to="/chat">
                 <Button
                   type="primary"
                   size="large"

@@ -100,6 +100,7 @@ public class Subscription {
         ACTIVE,
         PAST_DUE,
         CANCELLED,
-        EXPIRED
+        EXPIRED,
+        SUSPENDED
     }
 }

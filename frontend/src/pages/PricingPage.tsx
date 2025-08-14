@@ -5,6 +5,7 @@ import { subscriptionApi, type SubscriptionPlan } from "../services/subscription
 import { paymentApi, type CreatePaymentLinkRequest } from "../services/paymentApi";
 import { getUserByEmail } from "../services/userApi";
 import { useAuth } from "../context/AuthContext";
+import { formatVND } from "../utils/currency";
 import type { User } from "../types/auth";
 
 const { Title, Text, Paragraph } = Typography;
@@ -110,10 +111,7 @@ const PricingPage: React.FC = () => {
   };
 
   const formatPrice = (price: number): string => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(price);
+    return formatVND(price);
   };
 
   const getMonthlyEquivalent = (yearlyPrice: number): string => {

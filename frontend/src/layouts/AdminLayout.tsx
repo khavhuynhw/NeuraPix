@@ -11,8 +11,10 @@ import {
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  CreditCardOutlined,
   HomeOutlined,
+  TransactionOutlined,
+  ReconciliationOutlined,
+  AppstoreOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
@@ -39,6 +41,24 @@ const AdminLayout = () => {
       onClick: () => navigate("/admin/users"),
     },
     {
+      key: "/admin/transactions",
+      icon: <TransactionOutlined />,
+      label: "Transactions",
+      onClick: () => navigate("/admin/transactions"),
+    },
+    {
+      key: "/admin/subscriptions",
+      icon: <ReconciliationOutlined />,
+      label: "Subscriptions",
+      onClick: () => navigate("/admin/subscriptions"),
+    },
+    {
+      key: "/admin/plans",
+      icon: <AppstoreOutlined />,
+      label: "Plans",
+      onClick: () => navigate("/admin/plans"),
+    },
+    {
       key: "/admin/content",
       icon: <FileImageOutlined />,
       label: "Content Management",
@@ -49,12 +69,6 @@ const AdminLayout = () => {
       icon: <BarChartOutlined />,
       label: "Analytics",
       onClick: () => navigate("/admin/analytics"),
-    },
-    {
-      key: "/admin/billing",
-      icon: <CreditCardOutlined />,
-      label: "Billing & Plans",
-      onClick: () => navigate("/admin/billing"),
     },
     {
       key: "/admin/settings",

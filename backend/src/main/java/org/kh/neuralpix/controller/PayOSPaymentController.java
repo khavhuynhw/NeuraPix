@@ -6,6 +6,7 @@ import org.kh.neuralpix.config.PaymentConfig;
 import org.kh.neuralpix.constants.PayOSConstants;
 import org.kh.neuralpix.dto.UserDto;
 import org.kh.neuralpix.dto.payos.CreatePaymentLinkRequestDto;
+import org.kh.neuralpix.dto.payos.CreateUpgradePaymentLinkRequestDto;
 import org.kh.neuralpix.model.Transaction;
 import org.kh.neuralpix.service.EmailService;
 import org.kh.neuralpix.service.PayOSPaymentService;
@@ -83,9 +84,13 @@ public class PayOSPaymentController {
 
     @GetMapping("/return")
     public ResponseEntity<String> handlePaymentReturn(@RequestParam @NotNull Long orderCode, 
-                                                     @RequestParam(required = false) String status) {
+                                                     @RequestParam(required = false) String status,
+                                                     @RequestParam(required = false) String code,
+                                                     @RequestParam(required = false) String id,
+                                                     @RequestParam(required = false) String cancel) {
         try {
-            log.info("User returned from PayOS for order: {} with status: {}", orderCode, status);
+            log.info("User returned from PayOS for order: {} with status: {}, code: {}, id: {}, cancel: {}", 
+                orderCode, status, code, id, cancel);
             
             PaymentValidationUtil.validateOrderCode(orderCode);
 
@@ -100,7 +105,9 @@ public class PayOSPaymentController {
             log.info("Found transaction ID: {} with current status: {} for order: {}", 
                 transaction.getId(), transaction.getStatus(), orderCode);
 
-            String redirectUrl = determineRedirectUrlBasedOnTransactionStatus(transaction, orderCode, status);
+            // Use PayOS code and status to determine success
+            String paymentStatus = determinePaymentStatusFromParams(code, status, cancel);
+            String redirectUrl = determineRedirectUrlBasedOnTransactionStatus(transaction, orderCode, paymentStatus);
             
             log.info("Redirecting user to: {} for order: {}", redirectUrl, orderCode);
             return PaymentResponseUtil.createRedirectResponse(redirectUrl, "Processing Payment", 
@@ -200,27 +207,119 @@ public class PayOSPaymentController {
         }
     }
 
-    @PostMapping("/webhook")
-    public ResponseEntity<String> handleWebhook(){
-        return ResponseEntity.ok("Webhook endpoint is active. Please send a POST request with valid data.");
-    }
+//    @PostMapping("/webhook")
+//    public ResponseEntity<String> handleWebhook(){
+//        return ResponseEntity.ok("Webhook endpoint is active. Please send a POST request with valid data.");
+//    }
 
     @PostMapping("/cancel-payment/{orderCode}")
-    public ResponseEntity<Map<String, Object>> cancelPayment(@PathVariable @NotNull Long orderCode, 
+    public ResponseEntity<Map<String, Object>> cancelPayment(@PathVariable @NotNull Long orderCode,
                                                            @RequestParam(required = false) String reason) {
         try {
             log.info("Cancelling PayOS payment for order: {}", orderCode);
-            
+
             PaymentValidationUtil.validateOrderCode(orderCode);
-            
-            String cancellationReason = reason != null && !reason.trim().isEmpty() 
+
+            String cancellationReason = reason != null && !reason.trim().isEmpty()
                 ? reason : "Payment cancelled by user";
             PaymentLinkData paymentInfo = payOSPaymentService.cancelPaymentLink(orderCode, cancellationReason);
-            
+
             return PaymentResponseUtil.createSuccessResponse(paymentInfo);
         } catch (Exception e) {
             log.error("Error cancelling PayOS payment for order: {}", orderCode, e);
             return PaymentResponseUtil.createErrorResponse("Failed to cancel payment: " + e.getMessage(), 500);
+        }
+    }
+
+    @PostMapping("/create-upgrade-payment")
+    public ResponseEntity<Map<String, Object>> createUpgradePaymentLink(@Valid @RequestBody CreateUpgradePaymentLinkRequestDto request) {
+        try {
+            log.info("Creating PayOS upgrade payment link for user: {} - upgrade from {} to {}", 
+                request.getUserId(), request.getCurrentTier(), request.getNewTier());
+
+            PaymentValidationUtil.validateUpgradePaymentRequest(request);
+
+            // Generate unique order code for upgrade payment
+            Long orderCode = System.currentTimeMillis() / 1000;
+            
+            // Create product name for upgrade
+            String productName = String.format("Subscription Upgrade - %s to %s", 
+                request.getCurrentTier().name(), request.getNewTier().name());
+            
+            // Enhanced description with upgrade details
+            String description = request.getDescription() != null ? request.getDescription() : 
+                String.format("Upgrade subscription from %s to %s plan", 
+                    request.getCurrentTier().name(), request.getNewTier().name());
+
+            // Set return URLs specifically for upgrade payments
+            String returnUrl = request.getReturnUrl() != null ? request.getReturnUrl() : 
+                paymentConfig.getFrontend().getUpgradeSuccessUrl(orderCode);
+                
+            String cancelUrl = request.getCancelUrl() != null ? request.getCancelUrl() : 
+                paymentConfig.getFrontend().getUpgradeCancelUrl(orderCode);
+
+            // Create PayOS payment link
+            CheckoutResponseData paymentResponse = payOSPaymentService.createPaymentLink(
+                orderCode,
+                new BigDecimal(request.getUpgradeAmount()),
+                description,
+                request.getBuyerEmail()
+            );
+
+            if (paymentResponse == null) {
+                log.error("PayOS service returned null response for upgrade payment");
+                return PaymentResponseUtil.createErrorResponse("Failed to create upgrade payment link", 500);
+            }
+
+            // Create transaction record for upgrade payment
+            Transaction upgradeTransaction = Transaction.builder()
+                .orderCode(orderCode)
+                .userId(request.getUserId())
+                .subscriptionId(request.getSubscriptionId())
+                .amount(new BigDecimal(request.getUpgradeAmount()))
+                .currency("VND")
+                .status(Transaction.TransactionStatus.PENDING)
+                .type(Transaction.TransactionType.SUBSCRIPTION_UPGRADE)
+                .paymentProvider("payos")
+                .description(description)
+                .buyerEmail(request.getBuyerEmail())
+                .build();
+
+            upgradeTransaction = transactionService.createTransaction(upgradeTransaction);
+
+            log.info("Created upgrade transaction: {} for order: {} with amount: {}", 
+                upgradeTransaction.getId(), orderCode, request.getUpgradeAmount());
+
+            // Prepare response
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", true);
+            response.put("message", "Upgrade payment link created successfully");
+            response.put("orderCode", orderCode);
+            response.put("paymentLinkId", paymentResponse.getPaymentLinkId());
+            response.put("checkoutUrl", paymentResponse.getCheckoutUrl());
+            response.put("qrCode", paymentResponse.getQrCode());
+            response.put("amount", request.getUpgradeAmount());
+            response.put("currency", "VND");
+            response.put("description", description);
+            response.put("status", "PENDING");
+            response.put("transactionId", upgradeTransaction.getId());
+            response.put("upgradeDetails", Map.of(
+                "currentTier", request.getCurrentTier().name(),
+                "newTier", request.getNewTier().name(),
+                "subscriptionId", request.getSubscriptionId()
+            ));
+
+            log.info("Upgrade payment link created successfully for order: {} with checkout URL: {}", 
+                orderCode, paymentResponse.getCheckoutUrl());
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            log.warn("Invalid upgrade payment request: {}", e.getMessage());
+            return PaymentResponseUtil.createErrorResponse("Invalid request: " + e.getMessage(), 400);
+        } catch (Exception e) {
+            log.error("Error creating upgrade payment link for user: {}", request.getUserId(), e);
+            return PaymentResponseUtil.createErrorResponse("Failed to create upgrade payment link: " + e.getMessage(), 500);
         }
     }
 
@@ -290,19 +389,29 @@ public class PayOSPaymentController {
             transaction = transactionService.markTransactionAsPaid(orderCode, PayOSConstants.DEFAULT_PAYMENT_PROVIDER);
             log.info("Transaction {} marked as paid successfully", transaction.getId());
 
-            if (transaction.getSubscriptionId() != null && 
-                transaction.getType() == Transaction.TransactionType.SUBSCRIPTION_PAYMENT) {
-                
-                log.info("Activating subscription: {} for transaction: {}", 
-                    transaction.getSubscriptionId(), transaction.getId());
-                
-                try {
-                    subscriptionService.activateSubscription(transaction.getSubscriptionId());
-                    log.info("Subscription {} activated successfully", transaction.getSubscriptionId());
-                } catch (Exception e) {
-                    log.error("Failed to activate subscription {} for paid transaction {}. Manual intervention may be required.", 
-                        transaction.getSubscriptionId(), transaction.getId(), e);
-
+            if (transaction.getSubscriptionId() != null) {
+                if (transaction.getType() == Transaction.TransactionType.SUBSCRIPTION_PAYMENT) {
+                    log.info("Activating subscription: {} for transaction: {}", 
+                        transaction.getSubscriptionId(), transaction.getId());
+                    
+                    try {
+                        subscriptionService.activateSubscription(transaction.getSubscriptionId());
+                        log.info("Subscription {} activated successfully", transaction.getSubscriptionId());
+                    } catch (Exception e) {
+                        log.error("Failed to activate subscription {} for paid transaction {}. Manual intervention may be required.", 
+                            transaction.getSubscriptionId(), transaction.getId(), e);
+                    }
+                } else if (transaction.getType() == Transaction.TransactionType.SUBSCRIPTION_UPGRADE) {
+                    log.info("Processing subscription upgrade: {} for transaction: {}", 
+                        transaction.getSubscriptionId(), transaction.getId());
+                    
+                    try {
+                        processUpgradePaymentConfirmation(transaction);
+                        log.info("Subscription upgrade {} processed successfully", transaction.getSubscriptionId());
+                    } catch (Exception e) {
+                        log.error("Failed to process subscription upgrade {} for paid transaction {}. Manual intervention may be required.", 
+                            transaction.getSubscriptionId(), transaction.getId(), e);
+                    }
                 }
             }
 
@@ -373,6 +482,20 @@ public class PayOSPaymentController {
         }
     }
 
+    private String determinePaymentStatusFromParams(String code, String status, String cancel) {
+        // PayOS uses code=00 for success, and cancel=false for successful payments
+        if (code != null && "00".equals(code.trim()) && "false".equals(cancel)) {
+            return "success";
+        } else if (code != null && !"00".equals(code.trim())) {
+            return "failed";
+        } else if ("true".equals(cancel)) {
+            return "cancel";
+        } else if (status != null) {
+            return status.toLowerCase();
+        }
+        return "unknown";
+    }
+
     private String determineRedirectUrlBasedOnTransactionStatus(Transaction transaction, Long orderCode, String urlStatus) {
 
         if (transaction.isPaid()) {
@@ -396,8 +519,12 @@ public class PayOSPaymentController {
             if (urlStatus != null) {
                 String status = urlStatus.toLowerCase().trim();
                 if (status.contains("success") || status.contains("paid")) {
-
-                    return paymentConfig.getFrontend().getPaymentSuccessUrl(orderCode) + "&pending=true";
+                    // Check if this is a subscription payment even if not processed yet
+                    if (transaction.getSubscriptionId() != null) {
+                        return paymentConfig.getFrontend().getSubscriptionSuccessUrl(orderCode);
+                    } else {
+                        return paymentConfig.getFrontend().getPaymentSuccessUrl(orderCode) + "&pending=true";
+                    }
                 } else if (status.contains("cancel")) {
                     return paymentConfig.getFrontend().getPaymentCancelUrl(orderCode);
                 }
@@ -438,6 +565,57 @@ public class PayOSPaymentController {
         } catch (Exception e) {
             log.error("Failed to send payment success email for transaction {}. User will not receive email notification.", 
                 transaction.getId(), e);
+        }
+    }
+
+    /**
+     * Process upgrade payment confirmation and apply subscription upgrade
+     */
+    private void processUpgradePaymentConfirmation(Transaction transaction) {
+        try {
+            log.info("Processing upgrade payment confirmation for transaction: {}", transaction.getId());
+            
+            // Extract upgrade details from transaction description
+            String description = transaction.getDescription();
+            if (description == null || !description.contains("from") || !description.contains("to")) {
+                throw new IllegalStateException("Transaction description doesn't contain upgrade information");
+            }
+            
+            // Parse tier information from description like "Upgrade from BASIC to PREMIUM"
+            String[] parts = description.split(" ");
+            String currentTierStr = null;
+            String newTierStr = null;
+            
+            for (int i = 0; i < parts.length - 2; i++) {
+                if ("from".equals(parts[i]) && i + 1 < parts.length) {
+                    currentTierStr = parts[i + 1];
+                }
+                if ("to".equals(parts[i]) && i + 1 < parts.length) {
+                    newTierStr = parts[i + 1];
+                }
+            }
+            
+            if (currentTierStr == null || newTierStr == null) {
+                throw new IllegalStateException("Upgrade tier information is missing from transaction metadata");
+            }
+            
+            // Create upgrade request
+            org.kh.neuralpix.dto.request.SubscriptionUpgradeDto upgradeRequest = 
+                new org.kh.neuralpix.dto.request.SubscriptionUpgradeDto();
+            upgradeRequest.setNewTier(org.kh.neuralpix.model.enums.SubscriptionTier.valueOf(newTierStr));
+            upgradeRequest.setReason("Payment confirmed upgrade");
+            upgradeRequest.setUpgradeImmediately(true);
+            upgradeRequest.setPaymentOrderCode(transaction.getOrderCode());
+            
+            // Apply the subscription upgrade
+            subscriptionService.upgradeSubscription(transaction.getSubscriptionId(), upgradeRequest);
+            
+            log.info("Subscription upgrade applied successfully for transaction: {} - {} to {}", 
+                transaction.getId(), currentTierStr, newTierStr);
+                
+        } catch (Exception e) {
+            log.error("Failed to process upgrade payment confirmation for transaction: {}", transaction.getId(), e);
+            throw e;
         }
     }
 }

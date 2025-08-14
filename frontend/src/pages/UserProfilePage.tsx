@@ -24,9 +24,9 @@ import {
   Pagination,
   DatePicker,
   Select,
-  Modal,
 } from "antd";
 import { useNavigate } from "react-router-dom";
+import { formatVND } from "../utils/currency";
 import {
   UserOutlined,
   CameraOutlined,
@@ -49,6 +49,7 @@ import { getUserByEmail, updateUser } from "../services/userApi";
 import { subscriptionApi, type Subscription } from "../services/subscriptionApi";
 import { avatarApi } from "../services/avatarApi";
 import { ChangePasswordModal } from "../components/ChangePasswordModal";
+import { UpgradePaymentModal } from "../components/UpgradePaymentModal";
 import { transactionApi } from "../services/transactionApi";
 import type { User } from "../types/auth";
 import type { Transaction } from "../types/transaction";
@@ -77,6 +78,9 @@ export const UserProfilePage = () => {
   
   // Change password modal state
   const [changePasswordModalVisible, setChangePasswordModalVisible] = useState(false);
+  
+  // Upgrade payment modal state
+  const [upgradePaymentModalVisible, setUpgradePaymentModalVisible] = useState(false);
   
   // Transaction states
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -156,68 +160,31 @@ export const UserProfilePage = () => {
     }
   };
 
-  const handleUpgradePlan = async () => {
+  const handleUpgradePlan = () => {
     if (!subscription?.id) {
       // No active subscription, redirect to pricing page
       navigate('/pricing');
       return;
     }
 
-    try {
-      // Determine the next tier to upgrade to
-      const currentTier = subscription.tier;
-      let nextTier = '';
-      
-      if (currentTier === 'FREE') {
-        nextTier = 'BASIC';
-      } else if (currentTier === 'BASIC') {
-        nextTier = 'PREMIUM';
-      } else {
-        // Already at the highest tier
-        message.info("You're already on the highest tier!");
-        return;
-      }
-
-      // Show confirmation modal
-      Modal.confirm({
-        title: `Upgrade to ${nextTier}`,
-        content: `Are you sure you want to upgrade from ${currentTier} to ${nextTier}? You will be charged for the difference immediately.`,
-        okText: 'Upgrade Now',
-        cancelText: 'Cancel',
-        onOk: async () => {
-          try {
-            setLoading(true);
-            
-            // Call upgrade API
-            const response = await subscriptionApi.upgradeSubscription(subscription.id, {
-              newTier: nextTier,
-              reason: 'User-requested upgrade',
-              upgradeImmediately: true,
-            });
-
-            if (response.success) {
-              message.success('Subscription upgraded successfully!');
-              
-              // Refresh subscription data
-              if (currentUser?.id) {
-                await fetchSubscriptionData(currentUser.id);
-              }
-            } else {
-              message.error('Failed to upgrade subscription: ' + response.message);
-            }
-          } catch (error: unknown) {
-            const errorMessage = error instanceof Error ? error.message : 'Failed to upgrade subscription';
-            message.error(errorMessage);
-            console.error('Upgrade error:', error);
-          } finally {
-            setLoading(false);
-          }
-        },
-      });
-    } catch (error) {
-      console.error('Error preparing upgrade:', error);
-      message.error('Failed to prepare subscription upgrade');
+    // Check if already at highest tier
+    if (subscription.tier === 'PREMIUM') {
+      message.info("You're already on the highest tier!");
+      return;
     }
+
+    // Open upgrade payment modal
+    setUpgradePaymentModalVisible(true);
+  };
+
+  const handleUpgradeSuccess = async () => {
+    // Refresh subscription data after successful upgrade
+    if (currentUser?.id) {
+      await fetchSubscriptionData(currentUser.id);
+      await fetchUserTransactions(currentUser.id);
+    }
+    setUpgradePaymentModalVisible(false);
+    message.success('Subscription upgraded successfully!');
   };
 
   const handleSaveProfile = async (values: Record<string, unknown>) => {
@@ -697,10 +664,7 @@ export const UserProfilePage = () => {
                         <Space direction="vertical" size={2}>
                           <Text type="secondary">Price</Text>
                           <Text strong style={{ color: "#0079FF" }}>
-                            {new Intl.NumberFormat('vi-VN', {
-                              style: 'currency',
-                              currency: 'VND'
-                            }).format(subscription.price)}
+                            {formatVND(subscription.price)}
                             {subscription.billingCycle === 'YEARLY' ? '/year' : '/month'}
                           </Text>
                         </Space>
@@ -789,7 +753,8 @@ export const UserProfilePage = () => {
                         </div>
                       </div>
                     </Button>
-                    <Button
+                    {/* Temporarily disabled upgrade plan feature */}
+                    {/* <Button
                       icon={<CrownOutlined />}
                       block
                       onClick={() => navigate("/subscription")}
@@ -814,7 +779,7 @@ export const UserProfilePage = () => {
                           Upgrade or manage your subscription
                         </div>
                       </div>
-                    </Button>
+                    </Button> */}
                   </Space>
                 </Card>
               </Col>
@@ -872,13 +837,14 @@ export const UserProfilePage = () => {
                     </Row>
                     <Divider />
                     <Space wrap>
-                      <Button 
+                      {/* Temporarily disabled upgrade plan feature */}
+                      {/* <Button 
                         type="primary" 
                         icon={<SettingOutlined />}
                         onClick={() => handleUpgradePlan()}
                       >
                         Upgrade Plan
-                      </Button>
+                      </Button> */}
                       <Button 
                         icon={<CreditCardOutlined />}
                         onClick={() => navigate('/billing')}
@@ -1317,6 +1283,21 @@ export const UserProfilePage = () => {
         visible={changePasswordModalVisible}
         onCancel={() => setChangePasswordModalVisible(false)}
         onSuccess={() => setChangePasswordModalVisible(false)}
+      />
+
+      {/* Upgrade Payment Modal */}
+      <UpgradePaymentModal
+        visible={upgradePaymentModalVisible}
+        onCancel={() => setUpgradePaymentModalVisible(false)}
+        onSuccess={handleUpgradeSuccess}
+        subscription={subscription}
+        currentUser={{
+          id: currentUser?.id ?? 0,
+          email: currentUser?.email ?? '',
+          firstName: currentUser?.firstName,
+          lastName: currentUser?.lastName,
+          username: currentUser?.username,
+        }}
       />
     </div>
   );
