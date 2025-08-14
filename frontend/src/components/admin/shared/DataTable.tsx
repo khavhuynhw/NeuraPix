@@ -28,7 +28,7 @@ export interface DataTableAction {
   danger?: boolean;
 }
 
-export interface DataTableProps<T = any> extends Omit<TableProps<T>, 'dataSource'> {
+export interface DataTableProps<T = any> extends Omit<TableProps<T>, 'dataSource' | 'title'> {
   title: string;
   data: T[];
   columns: ColumnsType<T>;

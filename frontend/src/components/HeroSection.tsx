@@ -7,7 +7,6 @@ import {
   RocketOutlined,
 } from "@ant-design/icons";
 import { Link } from "react-router-dom";
-import { GeneratorPage } from "../pages/GeneratorPage";
 const { Title, Paragraph } = Typography;
 
 interface HeroSectionProps {

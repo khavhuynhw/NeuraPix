@@ -4,7 +4,6 @@ import {
   PlusOutlined,
   DownloadOutlined,
   EyeOutlined,
-  HeartOutlined,
   CalendarOutlined,
 } from '@ant-design/icons';
 import { generatedImageApi, imageApiUtils } from '../services/generatedImageApi';

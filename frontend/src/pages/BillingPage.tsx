@@ -18,7 +18,6 @@ import {
   DatePicker,
   Alert,
   Badge,
-  Tooltip,
 } from "antd";
 import {
   CreditCardOutlined,
@@ -30,15 +29,11 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   CrownOutlined,
-  CalendarOutlined,
-  DollarOutlined,
-  FileTextOutlined,
   SettingOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 // Mock data
@@ -672,12 +667,7 @@ export const BillingPage = () => {
                 `${range[0]}-${range[1]} of ${total} transactions`,
             }}
             scroll={{ x: 800 }}
-            style={{
-              "& .ant-table-thead > tr > th": {
-                backgroundColor: "rgba(0, 121, 255, 0.05)",
-                borderBottom: "2px solid rgba(0, 121, 255, 0.1)",
-              },
-            }}
+            style={{ background: "#fff" }}
           />
         </Card>
 
