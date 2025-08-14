@@ -124,7 +124,10 @@ public class PixelCutServiceImpl implements PixelCutService {
 
                 String imageUrl = request.getImageUrl();
                 if (imageUrl == null || imageUrl.trim().isEmpty()) {
-                    throw new RuntimeException("Invalid or empty image URL");
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Invalid or empty image URL")
+                        .build();
                 }
                 
                 // Convert to supported format if needed
@@ -164,7 +167,10 @@ public class PixelCutServiceImpl implements PixelCutService {
                     body = RequestBody.create(json, okhttp3.MediaType.parse("application/json"));
                 } catch (Exception ex) {
                     logger.error("Failed to serialize upscale request: {}", ex.getMessage(), ex);
-                    throw new RuntimeException("Serialization error", ex);
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Failed to serialize request data")
+                        .build();
                 }
 
                 Request httpRequest = new Request.Builder()
@@ -196,21 +202,33 @@ public class PixelCutServiceImpl implements PixelCutService {
                                 return result;
                             } else {
                                 logger.error("No result_url in upscale response: {}", responseBody);
-                                throw new RuntimeException("Invalid response from PixelCut API");
+                                return PixelCutImageGenerationResponse.builder()
+                                    .success(false)
+                                    .errorMessage("Invalid response from PixelCut API - no result URL")
+                                    .build();
                             }
                         } catch (Exception parseEx) {
                             logger.error("Failed to parse PixelCut upscale response: {}", parseEx.getMessage());
-                            throw new RuntimeException("Failed to parse API response", parseEx);
+                            return PixelCutImageGenerationResponse.builder()
+                                .success(false)
+                                .errorMessage("Failed to parse PixelCut API response")
+                                .build();
                         }
                     }
 
                     logger.error("Failed to upscale image. HTTP {} Response: {}", code, responseBody);
-                    throw new RuntimeException("Failed to upscale image. HTTP status: " + code);
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("PixelCut API error: HTTP " + code + (responseBody != null ? " - " + responseBody : ""))
+                        .build();
                 }
 
             } catch (Exception e) {
                 logger.error("Error upscaling image: {}", e.getMessage(), e);
-                throw new RuntimeException("Error upscaling image", e);
+                return PixelCutImageGenerationResponse.builder()
+                    .success(false)
+                    .errorMessage("Failed to upscale image: " + e.getMessage())
+                    .build();
             }
         });
     }
@@ -346,7 +364,10 @@ public class PixelCutServiceImpl implements PixelCutService {
 
                 String imageUrl = request.getImageUrl();
                 if (imageUrl == null || imageUrl.trim().isEmpty()) {
-                    throw new RuntimeException("Invalid or empty image URL");
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Invalid or empty image URL")
+                        .build();
                 }
                 
                 // Convert to supported format if needed
@@ -374,7 +395,10 @@ public class PixelCutServiceImpl implements PixelCutService {
                     body = RequestBody.create(json, okhttp3.MediaType.parse("application/json"));
                 } catch (Exception ex) {
                     logger.error("Failed to serialize remove-background request: {}", ex.getMessage(), ex);
-                    throw new RuntimeException("Serialization error", ex);
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Failed to serialize request data")
+                        .build();
                 }
 
                 Request httpRequest = new Request.Builder()
@@ -407,23 +431,37 @@ public class PixelCutServiceImpl implements PixelCutService {
                                 return result;
                             } else {
                                 logger.error("No result_url in response: {}", responseBody);
-                                throw new RuntimeException("Invalid response from PixelCut API");
+                                return PixelCutImageGenerationResponse.builder()
+                                    .success(false)
+                                    .errorMessage("Invalid response from PixelCut API - no result URL")
+                                    .build();
                             }
                         } catch (Exception parseEx) {
                             logger.error("Failed to parse PixelCut response: {}", parseEx.getMessage());
-                            throw new RuntimeException("Failed to parse API response", parseEx);
+                            return PixelCutImageGenerationResponse.builder()
+                                .success(false)
+                                .errorMessage("Failed to parse PixelCut API response")
+                                .build();
                         }
                     }
 
                     // Non-2xx
                     String errorBody = httpResponse.body() != null ? httpResponse.body().string() : null;
                     logger.error("Failed to remove background. HTTP {} Response: {}", code, errorBody);
-                    throw new RuntimeException("Failed to remove background. HTTP status: " + code);
+                    
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("PixelCut API error: HTTP " + code + (errorBody != null ? " - " + errorBody : ""))
+                        .build();
                 }
 
             } catch (Exception e) {
                 logger.error("Error removing background: {}", e.getMessage(), e);
-                throw new RuntimeException("Error removing background", e);
+                // Return error response instead of throwing exception
+                return PixelCutImageGenerationResponse.builder()
+                    .success(false)
+                    .errorMessage("Failed to remove background: " + e.getMessage())
+                    .build();
             }
         });
     }
@@ -435,7 +473,10 @@ public class PixelCutServiceImpl implements PixelCutService {
 
                 String imageUrl = request.getImageUrl();
                 if (imageUrl == null || imageUrl.trim().isEmpty()) {
-                    throw new RuntimeException("Invalid or empty image URL");
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Invalid or empty image URL")
+                        .build();
                 }
                 
                 // Convert to supported format if needed
@@ -464,7 +505,10 @@ public class PixelCutServiceImpl implements PixelCutService {
                     body = RequestBody.create(json, okhttp3.MediaType.parse("application/json"));
                 } catch (Exception ex) {
                     logger.error("Failed to serialize generate-background request: {}", ex.getMessage(), ex);
-                    throw new RuntimeException("Serialization error", ex);
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("Failed to serialize request data")
+                        .build();
                 }
 
                 Request httpRequest = new Request.Builder()
@@ -496,21 +540,33 @@ public class PixelCutServiceImpl implements PixelCutService {
                                 return result;
                             } else {
                                 logger.error("No result_url in generate background response: {}", responseBody);
-                                throw new RuntimeException("Invalid response from PixelCut API");
+                                return PixelCutImageGenerationResponse.builder()
+                                    .success(false)
+                                    .errorMessage("Invalid response from PixelCut API - no result URL")
+                                    .build();
                             }
                         } catch (Exception parseEx) {
                             logger.error("Failed to parse PixelCut generate background response: {}", parseEx.getMessage());
-                            throw new RuntimeException("Failed to parse API response", parseEx);
+                            return PixelCutImageGenerationResponse.builder()
+                                .success(false)
+                                .errorMessage("Failed to parse PixelCut API response")
+                                .build();
                         }
                     }
 
                     logger.error("Failed to generate background. HTTP {} Response: {}", code, responseBody);
-                    throw new RuntimeException("Failed to generate background. HTTP status: " + code);
+                    return PixelCutImageGenerationResponse.builder()
+                        .success(false)
+                        .errorMessage("PixelCut API error: HTTP " + code + (responseBody != null ? " - " + responseBody : ""))
+                        .build();
                 }
 
             } catch (Exception e) {
                 logger.error("Error generating background: {}", e.getMessage(), e);
-                throw new RuntimeException("Error generating background", e);
+                return PixelCutImageGenerationResponse.builder()
+                    .success(false)
+                    .errorMessage("Failed to generate background: " + e.getMessage())
+                    .build();
             }
         });
     }
