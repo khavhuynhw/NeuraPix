@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Row,
   Col,
@@ -13,7 +13,6 @@ import {
   Select,
   DatePicker,
   Spin,
-  Progress,
 } from "antd";
 import {
   UserOutlined,
@@ -22,9 +21,7 @@ import {
   DollarOutlined,
   DatabaseOutlined,
   EyeOutlined,
-  DownloadOutlined,
   ClockCircleOutlined,
-  PlusOutlined,
   FileTextOutlined,
   SettingOutlined,
 } from "@ant-design/icons";

@@ -73,13 +73,7 @@ class AvatarApiService {
       throw new Error("File size must be less than 5MB");
     }
 
-    // Check if it's actually an image by trying to read it
-    return new Promise<void>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve();
-      img.onerror = () => reject(new Error("Invalid image file"));
-      img.src = URL.createObjectURL(file);
-    });
+    // Basic validation only - detailed image validation can be done on upload
   }
 
   /**

@@ -14,7 +14,6 @@ import {
   Image,
   Tooltip,
   message,
-  Spin,
 } from "antd";
 import {
   StarOutlined,
@@ -82,7 +81,7 @@ export const ImageGenerator = () => {
     message.success("Added to favorites!");
   };
 
-  const handleDownload = (image: GeneratedImage) => {
+  const handleDownload = (_image: GeneratedImage) => {
     message.success("Download started!");
   };
 

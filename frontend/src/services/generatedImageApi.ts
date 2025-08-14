@@ -259,7 +259,7 @@ export const imageApiUtils = {
 
   // Check if image is successfully generated
   isImageReady: (image: GeneratedImageResponse): boolean => {
-    return image.status === 'completed' && !image.isDeleted && image.imageUrl;
+    return image.status === 'completed' && !image.isDeleted && !!image.imageUrl;
   },
 
   // Get image URL with fallback

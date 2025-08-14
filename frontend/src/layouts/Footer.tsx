@@ -87,9 +87,6 @@ export const Footer = () => {
                     input: {
                       backgroundColor: "transparent",
                       color: "white",
-                      "::placeholder": {
-                        color: "rgba(255, 255, 255, 0.6)",
-                      },
                     },
                   }}
                 />

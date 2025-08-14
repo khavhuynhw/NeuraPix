@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Row,
   Col,
@@ -10,9 +9,6 @@ import {
   Tag,
 } from "antd";
 import {
-  UserOutlined,
-  PictureOutlined,
-  DollarOutlined,
   RiseOutlined,
   FallOutlined,
 } from "@ant-design/icons";

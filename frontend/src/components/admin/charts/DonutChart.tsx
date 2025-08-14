@@ -93,9 +93,7 @@ const DonutChart: React.FC<DonutChartProps> = ({
         colors: '#374151',
       },
       markers: {
-        width: 12,
-        height: 12,
-        radius: 6,
+        size: 6,
       },
     },
     tooltip: {

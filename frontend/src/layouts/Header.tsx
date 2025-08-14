@@ -9,8 +9,6 @@ import {
   CrownOutlined,
   CreditCardOutlined,
   MessageOutlined,
-  ThunderboltOutlined,
-  HistoryOutlined,
 } from "@ant-design/icons";
 import { useAuth } from "../context/AuthContext";
 
