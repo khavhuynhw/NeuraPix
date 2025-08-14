@@ -11,7 +11,6 @@ import {
   Modal,
   Form,
   message,
-  Popconfirm,
   Row,
   Col,
   Statistic,
@@ -19,11 +18,6 @@ import {
 } from "antd";
 import { formatVND } from "../../utils/currency";
 import {
-  ReconciliationOutlined,
-  SearchOutlined,
-  EditOutlined,
-  DeleteOutlined,
-  MoreOutlined,
   ExportOutlined,
   FilterOutlined,
   PauseCircleOutlined,
@@ -41,7 +35,6 @@ const { Option } = Select;
 const SubscriptionManagement = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(false);
-  const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterTier, setFilterTier] = useState<string>("all");
   const [selectedSubscriptions, setSelectedSubscriptions] = useState<React.Key[]>([]);
@@ -128,8 +121,7 @@ const SubscriptionManagement = () => {
     fetchSubscriptions();
   }, [fetchSubscriptions]);
 
-  const handleSearch = (value: string) => {
-    setSearchText(value);
+  const handleSearch = (_: string) => {
     setPagination(prev => ({ ...prev, current: 1 }));
   };
 

@@ -41,7 +41,7 @@ export interface ActivityItem {
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
     // For now, we'll use the existing endpoints to calculate stats
-    const [usersResponse, subscriptionsResponse] = await Promise.all([
+    const [usersResponse] = await Promise.all([
       axios.get(`${BASE_URL}/api/v1/users?size=1000`, {
         headers: {
           "Authorization": `Bearer ${localStorage.getItem("accessToken")}`,
@@ -112,7 +112,7 @@ export async function getRecentUsers(limit: number = 5): Promise<RecentUser[]> {
     });
 
     const users = response.data.users || [];
-    return users.map((user: any, index: number) => ({
+    return users.map((user: any) => ({
       id: user.id,
       name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.username || 'Unknown User',
       email: user.email,
