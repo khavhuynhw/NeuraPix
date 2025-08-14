@@ -18,25 +18,77 @@ public class PaymentResponseUtil {
      * Create redirect HTML response
      */
     public static ResponseEntity<String> createRedirectResponse(String redirectUrl, String title, String message) {
-        String html = "<!DOCTYPE html>\\n" +
-                "<html>\\n" +
-                "<head>\\n" +
-                "    <meta charset='UTF-8'>\\n" +
-                "    <title>" + title + "</title>\\n" +
-                "    <script>\\n" +
-                "        window.location.href = '" + redirectUrl + "';\\n" +
-                "    </script>\\n" +
-                "</head>\\n" +
-                "<body>\\n" +
-                "    <p>" + message + "</p>\\n" +
-                "    <p>If you are not redirected automatically, <a href='" + redirectUrl + "'>click here</a>.</p>\\n" +
-                "</body>\\n" +
-                "</html>";
-        
+        String html = """
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='UTF-8'>
+            <title>%s</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    background: linear-gradient(135deg, #74ABE2, #5563DE);
+                    color: #333;
+                    margin: 0;
+                    height: 100vh;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                }
+                .card {
+                    background: white;
+                    padding: 30px 40px;
+                    border-radius: 12px;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+                    text-align: center;
+                    animation: fadeIn 0.5s ease-in-out;
+                }
+                h1 {
+                    color: #5563DE;
+                    margin-bottom: 15px;
+                }
+                p {
+                    font-size: 16px;
+                    margin-bottom: 20px;
+                }
+                a.button {
+                    display: inline-block;
+                    padding: 10px 20px;
+                    background: #5563DE;
+                    color: white;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    transition: background 0.3s ease;
+                }
+                a.button:hover {
+                    background: #3f4ab8;
+                }
+                @keyframes fadeIn {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            </style>
+            <script>
+                setTimeout(function() {
+                    window.location.href = '%s';
+                }, 2000);
+            </script>
+        </head>
+        <body>
+            <div class="card">
+                <h1>%s</h1>
+                <p>%s</p>
+                <a class="button" href="%s">Go now</a>
+            </div>
+        </body>
+        </html>
+    """.formatted(title, redirectUrl, title, message, redirectUrl);
+
         return ResponseEntity.ok()
-            .header("Content-Type", "text/html; charset=UTF-8")
-            .body(html);
+                .header("Content-Type", "text/html; charset=UTF-8")
+                .body(html);
     }
+
 
     /**
      * Create error redirect response with default message

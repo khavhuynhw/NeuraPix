@@ -3,11 +3,9 @@ import {
   Row,
   Col,
   Card,
-  Statistic,
   Typography,
   Table,
   Tag,
-  Progress,
   List,
   Avatar,
   Space,
@@ -15,176 +13,121 @@ import {
   Select,
   DatePicker,
   Spin,
+  Progress,
 } from "antd";
 import {
   UserOutlined,
   PictureOutlined,
   CrownOutlined,
   DollarOutlined,
-  RiseOutlined,
+  DatabaseOutlined,
   EyeOutlined,
   DownloadOutlined,
   ClockCircleOutlined,
+  PlusOutlined,
+  FileTextOutlined,
+  SettingOutlined,
 } from "@ant-design/icons";
-import Chart from "react-apexcharts";
-import type { ApexOptions } from "apexcharts";
+import StatCard from "../../components/admin/StatCard";
+import { getDashboardStats, getRecentUsers, getRecentActivity } from "../../services/adminApi";
+import type { DashboardStats, RecentUser, ActivityItem } from "../../services/adminApi";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
 
-// Mock data - replace with real API calls
-const mockStats = {
-  totalUsers: 1234,
-  totalImages: 45678,
-  premiumUsers: 187,
-  monthlyRevenue: 12450,
-  todaySignups: 23,
-  todayImages: 156,
-  conversionRate: 15.2,
-  avgImagesPerUser: 37,
-};
 
 
 
-const mockRecentUsers = [
-  {
-    key: "1",
-    name: "John Doe",
-    email: "john@example.com",
-    plan: "Premium",
-    joinedAt: "2024-01-15",
-    status: "Active",
-    avatar: null,
-  },
-  {
-    key: "2",
-    name: "Jane Smith",
-    email: "jane@example.com",
-    plan: "Free",
-    joinedAt: "2024-01-14",
-    status: "Active",
-    avatar: null,
-  },
-  {
-    key: "3",
-    name: "Bob Wilson",
-    email: "bob@example.com",
-    plan: "Premium",
-    joinedAt: "2024-01-13",
-    status: "Inactive",
-    avatar: null,
-  },
-];
 
-const mockRecentActivity = [
+
+const mockQuickActions = [
   {
-    id: 1,
-    action: "User registered",
-    user: "alice@example.com",
-    time: "2 minutes ago",
-    type: "user",
+    title: "Add User",
+    description: "Create new user account",
+    icon: <UserOutlined />,
+    action: "create-user",
   },
   {
-    id: 2,
-    action: "Image generated",
-    user: "bob@example.com",
-    time: "5 minutes ago",
-    type: "content",
+    title: "Generate Report",
+    description: "Export analytics data",
+    icon: <FileTextOutlined />,
+    action: "generate-report",
   },
   {
-    id: 3,
-    action: "Subscription upgraded",
-    user: "charlie@example.com",
-    time: "10 minutes ago",
-    type: "billing",
+    title: "System Settings",
+    description: "Configure platform settings",
+    icon: <SettingOutlined />,
+    action: "system-settings",
   },
   {
-    id: 4,
-    action: "Image downloaded",
-    user: "diana@example.com",
-    time: "15 minutes ago",
-    type: "content",
+    title: "Backup Data",
+    description: "Create system backup",
+    icon: <DatabaseOutlined />,
+    action: "backup-data",
   },
 ];
 
 
 
 const AdminDashboard = () => {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState("7d");
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
+  const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
 
-  const mainChartOptions: ApexOptions = {
-    chart: {
-      type: 'bar',
-      height: 480,
-      stacked: true,
-      toolbar: {
-        show: false
+  // Fetch dashboard data on component mount
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const [statsData, usersData, activityData] = await Promise.all([
+          getDashboardStats(),
+          getRecentUsers(4),
+          getRecentActivity(5),
+        ]);
+        
+        setStats(statsData);
+        setRecentUsers(usersData);
+        setRecentActivity(activityData);
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setLoading(false);
       }
-    },
-    colors: ['#e3f2fd', '#1976d2', '#7c4dff', '#f3e5f5'],
-    plotOptions: {
-      bar: {
-        horizontal: false,
-        columnWidth: '50%',
-      }
-    },
-    xaxis: {
-      categories: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-    },
-    legend: {
-      show: true,
-      position: 'bottom',
-      horizontalAlign: 'left'
-    },
-    fill: {
-      opacity: 1
-    },
-    dataLabels: {
-      enabled: false
-    },
-    grid: {
-      show: true,
-      borderColor: '#f0f0f0'
-    },
-    tooltip: {
-      theme: 'light'
-    }
-  };
+    };
 
+    fetchDashboardData();
+  }, [timeRange]);
 
-
-  const chartSeries = {
-    mainChart: [
-      {
-        name: 'Investment',
-        data: [35, 125, 35, 35, 35, 80, 35, 20, 35, 45, 15, 75]
-      },
-      {
-        name: 'Loss',
-        data: [35, 15, 15, 35, 65, 40, 80, 25, 15, 85, 25, 75]
-      },
-      {
-        name: 'Profit',
-        data: [35, 145, 35, 35, 20, 105, 100, 10, 65, 45, 30, 10]
-      },
-      {
-        name: 'Maintenance',
-        data: [0, 0, 75, 0, 0, 115, 0, 0, 0, 0, 150, 0]
-      }
-    ]
-  };
+  // Show loading state if no data
+  if (!stats) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '50vh' 
+      }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   const userColumns = [
     {
       title: "User",
       dataIndex: "name",
       key: "name",
-      render: (text: string, record: any) => (
+      render: (text: string, record: RecentUser) => (
         <Space>
-          <Avatar icon={<UserOutlined />} />
+          <Avatar 
+            size="small" 
+            icon={<UserOutlined />} 
+            style={{ background: "#f1f5f9", color: "#475569" }}
+          />
           <div>
-            <div style={{ fontWeight: 500 }}>{text}</div>
+            <div style={{ fontWeight: 500, color: "#334155" }}>{text}</div>
             <Text type="secondary" style={{ fontSize: 12 }}>
               {record.email}
             </Text>
@@ -196,44 +139,80 @@ const AdminDashboard = () => {
       title: "Plan",
       dataIndex: "plan",
       key: "plan",
-      render: (plan: string) => (
-        <Tag color={plan === "Premium" ? "gold" : "blue"}>{plan}</Tag>
-      ),
+      render: (plan: string) => {
+        const isPremium = plan === "PREMIUM" || plan === "Premium";
+        return (
+          <Tag 
+            style={{ 
+              background: isPremium ? "#fef3c7" : "#dbeafe",
+              color: isPremium ? "#92400e" : "#1d4ed8",
+              border: "none",
+              borderRadius: 4
+            }}
+          >
+            {plan}
+          </Tag>
+        );
+      },
     },
     {
       title: "Status",
       dataIndex: "status",
       key: "status",
       render: (status: string) => (
-        <Tag color={status === "Active" ? "green" : "red"}>{status}</Tag>
+        <Tag 
+          style={{ 
+            background: status === "Active" ? "#d1fae5" : "#fee2e2",
+            color: status === "Active" ? "#047857" : "#dc2626",
+            border: "none",
+            borderRadius: 4
+          }}
+        >
+          {status}
+        </Tag>
       ),
     },
     {
-      title: "Joined",
-      dataIndex: "joinedAt",
-      key: "joinedAt",
+      title: "Last Active",
+      dataIndex: "lastActive",
+      key: "lastActive",
+      render: (text: string) => (
+        <Text style={{ fontSize: 12, color: "#64748b" }}>{text}</Text>
+      ),
     },
   ];
+
+  // Transform recent users data for table
+  const usersTableData = recentUsers.map((user, index) => ({
+    key: user.id.toString(),
+    ...user,
+  }));
 
 
 
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "user":
-        return <UserOutlined style={{ color: "#1890ff" }} />;
+        return <UserOutlined style={{ color: "#3b82f6" }} />;
       case "content":
-        return <PictureOutlined style={{ color: "#52c41a" }} />;
+        return <PictureOutlined style={{ color: "#059669" }} />;
       case "billing":
-        return <DollarOutlined style={{ color: "#faad14" }} />;
+        return <DollarOutlined style={{ color: "#f59e0b" }} />;
       default:
-        return <ClockCircleOutlined />;
+        return <ClockCircleOutlined style={{ color: "#64748b" }} />;
     }
+  };
+
+  const handleQuickAction = (action: string) => {
+    console.log(`Executing action: ${action}`);
+    // Add navigation or modal logic here
   };
 
 
 
   return (
-    <div style={{ padding: "24px" }}>
+    <div style={{ padding: "24px", background: "#f8fafc", minHeight: "100vh" }}>
+      {/* Header Section */}
       <div style={{ marginBottom: 32 }}>
         <div
           style={{
@@ -244,346 +223,201 @@ const AdminDashboard = () => {
           }}
         >
           <div>
-            <Title level={2} style={{ margin: 0, color: "#1e293b", fontWeight: 700 }}>
+            <Title 
+              level={2} 
+              style={{ 
+                margin: 0, 
+                color: "#1e293b", 
+                fontWeight: 600,
+                fontSize: 28
+              }}
+            >
               Dashboard Overview
             </Title>
             <Text style={{ color: "#64748b", fontSize: 16 }}>
-              Welcome back! Here's what's happening with your platform.
+              Monitor your platform's performance and manage operations
             </Text>
           </div>
-          <Space size="large">
+          <Space size="middle">
             <Select
               value={timeRange}
               onChange={setTimeRange}
-              style={{ width: 140 }}
-              size="large"
+              style={{ width: 120 }}
+              size="middle"
+              bordered={false}
+              style={{
+                background: "#ffffff",
+                borderRadius: 8,
+                border: "1px solid #e2e8f0"
+              }}
             >
-              <Select.Option value="1d">Last Day</Select.Option>
-              <Select.Option value="7d">Last Week</Select.Option>
-              <Select.Option value="30d">Last Month</Select.Option>
-              <Select.Option value="90d">Last Quarter</Select.Option>
+              <Select.Option value="1d">Today</Select.Option>
+              <Select.Option value="7d">7 Days</Select.Option>
+              <Select.Option value="30d">30 Days</Select.Option>
+              <Select.Option value="90d">90 Days</Select.Option>
             </Select>
-            <RangePicker size="large" />
+            <RangePicker 
+              size="middle" 
+              style={{
+                borderRadius: 8,
+                border: "1px solid #e2e8f0"
+              }}
+            />
           </Space>
         </div>
       </div>
 
       <Spin spinning={loading}>
-                {/* Key Metrics */}
+        {/* Key Metrics */}
         <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              style={{
-                borderRadius: 16,
-                border: "none",
-                background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                color: "white",
-                boxShadow: "0 10px 25px rgba(102, 126, 234, 0.3)",
+            <StatCard
+              title="Total Users"
+              value={stats.totalUsers}
+              subtitle={`+${stats.todaySignups} today`}
+              icon={<UserOutlined />}
+              trend={{
+                value: "+12.3%",
+                isPositive: true,
               }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Total Users</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
-                    {mockStats.totalUsers.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    +{mockStats.todaySignups} today
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: "rgba(255, 255, 255, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                  }}
-                >
-                  <UserOutlined />
-                </div>
-              </div>
-            </Card>
+            />
           </Col>
-          
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              style={{
-                borderRadius: 16,
-                border: "none",
-                background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                color: "white",
-                boxShadow: "0 10px 25px rgba(240, 147, 251, 0.3)",
+            <StatCard
+              title="Images Generated"
+              value={stats.totalImages}
+              subtitle={`+${stats.todayImages} today`}
+              icon={<PictureOutlined />}
+              trend={{
+                value: "+8.1%",
+                isPositive: true,
               }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Images Generated</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
-                    {mockStats.totalImages.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    +{mockStats.todayImages} today
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: "rgba(255, 255, 255, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                  }}
-                >
-                  <PictureOutlined />
-                </div>
-              </div>
-            </Card>
+            />
           </Col>
-
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              style={{
-                borderRadius: 16,
-                border: "none",
-                background: "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
-                color: "white",
-                boxShadow: "0 10px 25px rgba(79, 172, 254, 0.3)",
+            <StatCard
+              title="Premium Users"
+              value={stats.premiumUsers}
+              subtitle={`${stats.conversionRate}% conversion rate`}
+              icon={<CrownOutlined />}
+              trend={{
+                value: "+15.7%",
+                isPositive: true,
               }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Premium Users</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
-                    {mockStats.premiumUsers.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    {mockStats.conversionRate}% conversion rate
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: "rgba(255, 255, 255, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                  }}
-                >
-                  <CrownOutlined />
-                </div>
-              </div>
-            </Card>
+            />
           </Col>
-
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              style={{
-                borderRadius: 16,
-                border: "none",
-                background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-                color: "white",
-                boxShadow: "0 10px 25px rgba(67, 233, 123, 0.3)",
+            <StatCard
+              title="Monthly Revenue"
+              value={`$${stats.monthlyRevenue.toLocaleString()}`}
+              subtitle="Last 30 days"
+              icon={<DollarOutlined />}
+              trend={{
+                value: "+22.5%",
+                isPositive: true,
               }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 8 }}>Monthly Revenue</div>
-                  <div style={{ fontSize: 32, fontWeight: 700, marginBottom: 4 }}>
-                    ${mockStats.monthlyRevenue.toLocaleString()}
-                  </div>
-                  <div style={{ fontSize: 12, opacity: 0.8 }}>
-                    +12.5% from last month
-                  </div>
-                </div>
-                <div
-                  style={{
-                    width: 56,
-                    height: 56,
-                    borderRadius: 14,
-                    background: "rgba(255, 255, 255, 0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: 24,
-                  }}
-                >
-                  <DollarOutlined />
-                </div>
-              </div>
-            </Card>
-          </Col>
-        </Row>
-
-        {/* Main Growth Chart */}
-        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
-          <Col xs={24}>
-            <Card
-              title={
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ 
-                      fontSize: 20, 
-                      fontWeight: 700, 
-                      color: "#1e293b", 
-                      marginBottom: 4,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.5px'
-                    }}>
-                      Total Growth
-                    </div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: "#1e293b" }}>$2,324.00</div>
-                  </div>
-                  <Select
-                    defaultValue="today"
-                    style={{ width: 120 }}
-                    size="large"
-                    options={[
-                      { value: 'today', label: 'Today' },
-                      { value: 'month', label: 'This Month' },
-                      { value: 'year', label: 'This Year' },
-                    ]}
-                  />
-                </div>
-              }
-              style={{
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <Chart
-                options={mainChartOptions}
-                series={chartSeries.mainChart}
-                type="bar"
-                height={480}
-              />
-            </Card>
+            />
           </Col>
         </Row>
 
         {/* Secondary Metrics */}
         <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
           <Col xs={24} sm={8}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                background: "white",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-              }}
-              bodyStyle={{ padding: "20px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: 20,
-                  }}
-                >
-                  <RiseOutlined />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>Avg Images/User</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#1e293b" }}>
-                    {mockStats.avgImagesPerUser}
-                  </div>
-                </div>
-              </div>
-            </Card>
+            <StatCard
+              title="Active Users"
+              value={stats.activeUsers}
+              subtitle="Last 24 hours"
+              icon={<EyeOutlined />}
+            />
           </Col>
           <Col xs={24} sm={8}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                background: "white",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
-              }}
-              bodyStyle={{ padding: "20px" }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: 20,
-                  }}
-                >
-                  <EyeOutlined />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>Daily Active Users</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#1e293b" }}>456</div>
-                </div>
-              </div>
-            </Card>
+            <StatCard
+              title="Collections"
+              value={stats.collectionsCount}
+              subtitle="User collections"
+              icon={<DatabaseOutlined />}
+            />
           </Col>
           <Col xs={24} sm={8}>
-            <Card
-              style={{
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                background: "white",
-                boxShadow: "0 2px 8px rgba(0, 0, 0, 0.04)",
+            <StatCard
+              title="Storage Used"
+              value={`${stats.storageUsed}%`}
+              subtitle="Of total capacity"
+              icon={<DatabaseOutlined />}
+              trend={{
+                value: "+2.3%",
+                isPositive: false,
               }}
-              bodyStyle={{ padding: "20px" }}
+            />
+          </Col>
+        </Row>
+
+        {/* Quick Actions */}
+        <Row gutter={[24, 24]} style={{ marginBottom: 32 }}>
+          <Col span={24}>
+            <Card
+              title={
+                <span style={{ fontSize: 18, fontWeight: 600, color: "#1e293b" }}>
+                  Quick Actions
+                </span>
+              }
+              style={{
+                borderRadius: 8,
+                border: "1px solid #e2e8f0",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
+              }}
+              bodyStyle={{ padding: "24px" }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "white",
-                    fontSize: 20,
-                  }}
-                >
-                  <DownloadOutlined />
-                </div>
-                <div>
-                  <div style={{ fontSize: 13, color: "#64748b", marginBottom: 4 }}>Downloads Today</div>
-                  <div style={{ fontSize: 24, fontWeight: 700, color: "#1e293b" }}>89</div>
-                </div>
-              </div>
+              <Row gutter={[16, 16]}>
+                {mockQuickActions.map((action, index) => (
+                  <Col xs={24} sm={12} md={6} key={index}>
+                    <Card
+                      hoverable
+                      style={{
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        cursor: "pointer",
+                        transition: "all 0.2s",
+                      }}
+                      bodyStyle={{ padding: "20px" }}
+                      onClick={() => handleQuickAction(action.action)}
+                    >
+                      <div style={{ textAlign: "center" }}>
+                        <div
+                          style={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 8,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            margin: "0 auto 12px",
+                            color: "#475569",
+                            fontSize: 20,
+                          }}
+                        >
+                          {action.icon}
+                        </div>
+                        <div style={{ fontWeight: 600, color: "#334155", marginBottom: 4 }}>
+                          {action.title}
+                        </div>
+                        <Text style={{ fontSize: 12, color: "#64748b" }}>
+                          {action.description}
+                        </Text>
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
             </Card>
           </Col>
         </Row>
 
-        {/* Content Sections */}
+
+        {/* Data Tables Section */}
         <Row gutter={[24, 24]}>
-          <Col xs={24} lg={12}>
+          <Col xs={24} lg={14}>
             <Card
               title={
                 <span style={{ fontSize: 18, fontWeight: 600, color: "#1e293b" }}>
@@ -594,73 +428,94 @@ const AdminDashboard = () => {
                 <Button 
                   type="primary" 
                   style={{ 
-                    borderRadius: 8,
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                    borderRadius: 6,
+                    background: "#3b82f6",
                     border: "none",
+                    boxShadow: "none",
                   }}
                 >
                   View All
                 </Button>
               }
               style={{
-                borderRadius: 12,
+                borderRadius: 8,
                 border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
               }}
               bodyStyle={{ padding: "0" }}
             >
               <Table
                 columns={userColumns}
-                dataSource={mockRecentUsers}
+                dataSource={usersTableData}
                 pagination={false}
-                size="small"
+                size="middle"
+                loading={loading}
                 style={{ 
-                  borderRadius: "0 0 12px 12px",
+                  borderRadius: "0 0 8px 8px",
                 }}
               />
             </Card>
           </Col>
 
-          <Col xs={24} lg={12}>
+          <Col xs={24} lg={10}>
             <Card
               title={
                 <span style={{ fontSize: 18, fontWeight: 600, color: "#1e293b" }}>
-                  Recent Activity
+                  Activity Feed
                 </span>
               }
               extra={
                 <Button 
-                  type="primary" 
+                  type="text" 
                   style={{ 
-                    borderRadius: 8,
-                    background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                    border: "none",
+                    color: "#64748b",
+                    padding: 0,
                   }}
                 >
                   View All
                 </Button>
               }
               style={{
-                borderRadius: 12,
+                borderRadius: 8,
                 border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+                boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)",
               }}
-              bodyStyle={{ padding: "20px" }}
+              bodyStyle={{ padding: "16px" }}
             >
               <List
                 itemLayout="horizontal"
-                dataSource={mockRecentActivity}
+                dataSource={recentActivity}
+                loading={loading}
                 renderItem={(item) => (
-                  <List.Item>
+                  <List.Item style={{ padding: "12px 0", borderBottom: "1px solid #f1f5f9" }}>
                     <List.Item.Meta
-                      avatar={getActivityIcon(item.type)}
-                      title={item.action}
+                      avatar={
+                        <div
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: 6,
+                            background: "#f1f5f9",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 14,
+                          }}
+                        >
+                          {getActivityIcon(item.type)}
+                        </div>
+                      }
+                      title={
+                        <Text style={{ fontSize: 14, fontWeight: 500, color: "#334155" }}>
+                          {item.action}
+                        </Text>
+                      }
                       description={
-                        <Space>
-                          <Text type="secondary">{item.user}</Text>
-                          <Text type="secondary">•</Text>
-                          <Text type="secondary">{item.time}</Text>
-                        </Space>
+                        <div>
+                          <Text style={{ fontSize: 12, color: "#64748b" }}>{item.user}</Text>
+                          <br />
+                          <Text style={{ fontSize: 11, color: "#94a3b8" }}>{item.time}</Text>
+                        </div>
                       }
                     />
                   </List.Item>
@@ -670,85 +525,6 @@ const AdminDashboard = () => {
           </Col>
         </Row>
 
-        {/* Quick Actions */}
-        <Row gutter={[24, 24]} style={{ marginTop: 32 }}>
-          <Col span={24}>
-            <Card 
-              title={
-                <span style={{ fontSize: 18, fontWeight: 600, color: "#1e293b" }}>
-                  Quick Actions
-                </span>
-              }
-              style={{
-                borderRadius: 12,
-                border: "1px solid #e2e8f0",
-                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-              }}
-              bodyStyle={{ padding: "24px" }}
-            >
-              <Space wrap size="large">
-                <Button 
-                  type="primary" 
-                  icon={<UserOutlined />}
-                  size="large"
-                  style={{
-                    borderRadius: 10,
-                    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                    border: "none",
-                    height: 48,
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    fontWeight: 500,
-                  }}
-                >
-                  Add New User
-                </Button>
-                <Button 
-                  icon={<PictureOutlined />}
-                  size="large"
-                  style={{
-                    borderRadius: 10,
-                    border: "1px solid #e2e8f0",
-                    height: 48,
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    fontWeight: 500,
-                  }}
-                >
-                  View All Images
-                </Button>
-                <Button 
-                  icon={<DollarOutlined />}
-                  size="large"
-                  style={{
-                    borderRadius: 10,
-                    border: "1px solid #e2e8f0",
-                    height: 48,
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    fontWeight: 500,
-                  }}
-                >
-                  Generate Revenue Report
-                </Button>
-                <Button 
-                  icon={<DownloadOutlined />}
-                  size="large"
-                  style={{
-                    borderRadius: 10,
-                    border: "1px solid #e2e8f0",
-                    height: 48,
-                    paddingLeft: 24,
-                    paddingRight: 24,
-                    fontWeight: 500,
-                  }}
-                >
-                  Export User Data
-                </Button>
-              </Space>
-            </Card>
-          </Col>
-        </Row>
       </Spin>
     </div>
   );

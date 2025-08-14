@@ -137,7 +137,7 @@ public class UsageTrackingServiceImpl implements UsageTrackingService {
     @Override
     public boolean canGenerateImage(String username) {
         try {
-            var user = userService.findByUsername(username);
+            var user = userService.findByEmail(username);
             if (user.isPresent()) {
                 return canGenerateImage(user.get().getId());
             } else {

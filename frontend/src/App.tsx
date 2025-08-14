@@ -26,6 +26,9 @@ import UserManagement from "./pages/admin/UserManagement";
 import ContentManagement from "./pages/admin/ContentManagement";
 import AdminAnalytics from "./pages/admin/AdminAnalytics";
 import AdminSettings from "./pages/admin/AdminSettings";
+import TransactionManagement from "./pages/admin/TransactionManagement";
+import SubscriptionManagement from "./pages/admin/SubscriptionManagement";
+import PlanManagement from "./pages/admin/PlanManagement";
 import { ChatPage } from "./pages/ChatPage";
 const { Content } = Layout;
 
@@ -55,9 +58,11 @@ const App = () => (
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="transactions" element={<TransactionManagement />} />
+              <Route path="subscriptions" element={<SubscriptionManagement />} />
+              <Route path="plans" element={<PlanManagement />} />
               <Route path="content" element={<ContentManagement />} />
               <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="billing" element={<BillingPage />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
             <Route path="/chat" element={<ChatPage />} />
@@ -105,6 +110,8 @@ const App = () => (
                       <Route path="/payment/failed" element={<PaymentFailedPage />} />
                       <Route path="/subscription/success" element={<SubscriptionSuccessPage />} />
                       <Route path="/subscription/cancel" element={<PaymentCancelPage />} />
+                      <Route path="/upgrade/success" element={<SubscriptionSuccessPage />} />
+                      <Route path="/upgrade/cancel" element={<PaymentCancelPage />} />
                       <Route path="/generator" element={<GeneratorPage />} />
 
                       <Route path="*" element={<NotFound />} />

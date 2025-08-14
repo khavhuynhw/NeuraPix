@@ -13,4 +13,8 @@ public interface SubscriptionPlanRepository extends JpaRepository<SubscriptionPl
     List<SubscriptionPlan> findByIsActive(SubscriptionPlan.IsActive isActive);
     SubscriptionPlan findByTierAndIsActive(SubscriptionTier tier, SubscriptionPlan.IsActive isActive);
     boolean existsByName(String name);
+    
+    // Count methods for statistics
+    long countByTier(SubscriptionTier tier);
+    long countByIsActive(SubscriptionPlan.IsActive isActive);
 }

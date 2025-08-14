@@ -31,6 +31,8 @@ public class PaymentConfig {
         private String paymentSuccessPath = "/payment/success";
         private String paymentCancelPath = "/payment/cancel";
         private String paymentFailedPath = "/payment/failed";
+        private String upgradeSuccessPath = "/upgrade/success";
+        private String upgradeCancelPath = "/upgrade/cancel";
         private String homePath = "/";
         
         public String getSubscriptionSuccessUrl(Long orderCode) {
@@ -51,6 +53,14 @@ public class PaymentConfig {
         
         public String getPaymentFailedUrl(Long orderCode) {
             return baseUrl + paymentFailedPath + "?orderCode=" + orderCode;
+        }
+        
+        public String getUpgradeSuccessUrl(Long orderCode) {
+            return baseUrl + upgradeSuccessPath + "?orderCode=" + orderCode;
+        }
+        
+        public String getUpgradeCancelUrl(Long orderCode) {
+            return baseUrl + upgradeCancelPath + "?orderCode=" + orderCode;
         }
         
         public String getHomeUrl() {

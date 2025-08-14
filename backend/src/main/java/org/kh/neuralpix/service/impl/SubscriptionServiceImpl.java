@@ -17,6 +17,9 @@ import org.kh.neuralpix.service.EmailService;
 import org.kh.neuralpix.service.PayOSPaymentService;
 import org.kh.neuralpix.service.SubscriptionService;
 import org.kh.neuralpix.service.TransactionService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Slf4j
@@ -48,6 +52,11 @@ public class SubscriptionServiceImpl implements SubscriptionService {
     public Subscription getById(Long id) {
         return subscriptionRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException(
                 "Subscription not found with id: " + id));
+    }
+
+    @Override
+    public Optional<Subscription> findById(Long id) {
+        return subscriptionRepository.findById(id);
     }
 
     @Override
@@ -467,8 +476,17 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         }
         
         try {
-            // Process upgrade payment if there's a price difference
-            if (priceDifference.compareTo(BigDecimal.ZERO) > 0 && request.getUpgradeImmediately()) {
+            // Verify payment if order code is provided (for webhook-triggered upgrades)
+            if (request.getPaymentOrderCode() != null) {
+                boolean paymentVerified = verifyUpgradePayment(subscription, request.getPaymentOrderCode());
+                
+                if (!paymentVerified) {
+                    throw new SubscriptionException("Payment verification failed for subscription upgrade");
+                }
+                
+                log.info("Payment verified successfully for upgrade order: {}", request.getPaymentOrderCode());
+            } else if (priceDifference.compareTo(BigDecimal.ZERO) > 0 && request.getUpgradeImmediately()) {
+                // Process upgrade payment if there's a price difference (direct upgrade without payment flow)
                 boolean paymentSuccessful = processUpgradePayment(subscription, user, priceDifference, request);
                 
                 if (!paymentSuccessful) {
@@ -504,6 +522,60 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         } catch (Exception e) {
             log.error("Failed to upgrade subscription: {}", subscriptionId, e);
             throw new SubscriptionException("Failed to upgrade subscription: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Verify upgrade payment has been completed
+     */
+    private boolean verifyUpgradePayment(Subscription subscription, Long orderCode) {
+        try {
+            log.info("Verifying upgrade payment for subscription: {} with order code: {}", 
+                    subscription.getId(), orderCode);
+            
+            // Find the transaction by order code
+            Optional<org.kh.neuralpix.model.Transaction> transactionOpt = 
+                    transactionRepos.findByOrderCode(orderCode);
+            
+            if (transactionOpt.isEmpty()) {
+                log.warn("Transaction not found for order code: {}", orderCode);
+                return false;
+            }
+            
+            org.kh.neuralpix.model.Transaction transaction = transactionOpt.get();
+            
+            // Verify transaction details
+            if (!transaction.getUserId().equals(subscription.getUserId())) {
+                log.warn("Transaction user ID {} does not match subscription user ID {}", 
+                        transaction.getUserId(), subscription.getUserId());
+                return false;
+            }
+            
+            if (!transaction.getSubscriptionId().equals(subscription.getId())) {
+                log.warn("Transaction subscription ID {} does not match expected subscription ID {}", 
+                        transaction.getSubscriptionId(), subscription.getId());
+                return false;
+            }
+            
+            if (transaction.getType() != org.kh.neuralpix.model.Transaction.TransactionType.SUBSCRIPTION_UPGRADE) {
+                log.warn("Transaction type {} is not an upgrade payment", transaction.getType());
+                return false;
+            }
+            
+            // Check payment status
+            if (transaction.getStatus() != org.kh.neuralpix.model.Transaction.TransactionStatus.PAID) {
+                log.warn("Transaction {} is not in PAID status, current status: {}", 
+                        transaction.getId(), transaction.getStatus());
+                return false;
+            }
+            
+            log.info("Payment verification successful for order: {} - transaction: {}", 
+                    orderCode, transaction.getId());
+            return true;
+            
+        } catch (Exception e) {
+            log.error("Error verifying upgrade payment for order: {}", orderCode, e);
+            return false;
         }
     }
 
@@ -553,6 +625,148 @@ public class SubscriptionServiceImpl implements SubscriptionService {
         Subscription subscription = subscriptionRepository.findById(id).orElseThrow(
                 () -> new ResourceNotFoundException("Subscription not found with id: " + id));
         subscription.setStatus(Subscription.SubscriptionStatus.CANCELLED);
+        subscriptionRepository.save(subscription);
+    }
+
+    @Override
+    public Page<Subscription> getAllSubscriptions(Pageable pageable) {
+        return subscriptionRepository.findAll(pageable);
+    }
+
+    @Override
+    public Page<Subscription> searchSubscriptions(String status, String tier, String billingCycle, String autoRenew, Long userId, Pageable pageable) {
+        List<Subscription> allSubscriptions = subscriptionRepository.findAll();
+        
+        List<Subscription> filteredSubscriptions = allSubscriptions.stream()
+            .filter(subscription -> {
+                if (status != null && !subscription.getStatus().name().equalsIgnoreCase(status)) {
+                    return false;
+                }
+                if (tier != null && !subscription.getTier().name().equalsIgnoreCase(tier)) {
+                    return false;
+                }
+                if (billingCycle != null && !subscription.getBillingCycle().name().equalsIgnoreCase(billingCycle)) {
+                    return false;
+                }
+                if (autoRenew != null && !subscription.getAutoRenew().toString().equalsIgnoreCase(autoRenew)) {
+                    return false;
+                }
+                if (userId != null && !subscription.getUserId().equals(userId)) {
+                    return false;
+                }
+                return true;
+            })
+            .collect(Collectors.toList());
+
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), filteredSubscriptions.size());
+        
+        List<Subscription> pageContent = filteredSubscriptions.subList(start, end);
+        return new PageImpl<>(pageContent, pageable, filteredSubscriptions.size());
+    }
+
+    @Override
+    @Transactional
+    public void suspendSubscription(Long subscriptionId, String reason) {
+        log.info("Suspending subscription: {} with reason: {}", subscriptionId, reason);
+        
+        Subscription subscription = subscriptionRepository.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Subscription not found with id: " + subscriptionId));
+        
+        if (subscription.getStatus() != Subscription.SubscriptionStatus.ACTIVE) {
+            throw new IllegalArgumentException("Cannot suspend non-active subscription");
+        }
+        
+        subscription.setStatus(Subscription.SubscriptionStatus.SUSPENDED);
+        subscription.setCancellationReason(reason);
+        subscription.setUpdatedAt(LocalDateTime.now());
+        
+        subscriptionRepository.save(subscription);
+        
+        // Record history
+        recordSubscriptionHistory(subscription.getUserId(), subscriptionId, "SUSPENDED",
+                subscription.getTier().name(), subscription.getTier().name(), BigDecimal.ZERO);
+        
+        log.info("Successfully suspended subscription: {}", subscriptionId);
+    }
+
+    @Override
+    public long countSubscriptionsByStatus(Subscription.SubscriptionStatus status) {
+        return subscriptionRepository.countByStatus(status);
+    }
+
+    @Override
+    public Double getTotalRevenue() {
+        List<Subscription> activeSubscriptions = subscriptionRepository.findByStatus(Subscription.SubscriptionStatus.ACTIVE);
+        return activeSubscriptions.stream()
+            .mapToDouble(subscription -> subscription.getPrice().doubleValue())
+            .sum();
+    }
+
+    @Override
+    public Double getMonthlyRevenue() {
+        List<Subscription> activeSubscriptions = subscriptionRepository.findByStatus(Subscription.SubscriptionStatus.ACTIVE);
+        return activeSubscriptions.stream()
+            .filter(subscription -> subscription.getBillingCycle() == Subscription.BillingCycle.MONTHLY)
+            .mapToDouble(subscription -> subscription.getPrice().doubleValue())
+            .sum();
+    }
+
+    @Override
+    public Double getAverageRevenuePerUser() {
+        List<Subscription> activeSubscriptions = subscriptionRepository.findByStatus(Subscription.SubscriptionStatus.ACTIVE);
+        if (activeSubscriptions.isEmpty()) {
+            return 0.0;
+        }
+        double totalRevenue = activeSubscriptions.stream()
+            .mapToDouble(subscription -> subscription.getPrice().doubleValue())
+            .sum();
+        return totalRevenue / activeSubscriptions.size();
+    }
+
+    @Override
+    public Double getChurnRate() {
+        long totalSubscriptions = subscriptionRepository.count();
+        long cancelledSubscriptions = subscriptionRepository.countByStatus(Subscription.SubscriptionStatus.CANCELLED);
+        
+        if (totalSubscriptions == 0) {
+            return 0.0;
+        }
+        
+        return (double) cancelledSubscriptions / totalSubscriptions * 100;
+    }
+
+    @Override
+    public Double getGrowthRate() {
+        // This is a simplified calculation - in a real scenario, you'd compare monthly/quarterly growth
+        long activeSubscriptions = subscriptionRepository.countByStatus(Subscription.SubscriptionStatus.ACTIVE);
+        long totalSubscriptions = subscriptionRepository.count();
+        
+        if (totalSubscriptions == 0) {
+            return 0.0;
+        }
+        
+        return (double) activeSubscriptions / totalSubscriptions * 100;
+    }
+
+    @Override
+    public List<Subscription> getTransactionsBySubscriptionId(Long subscriptionId) {
+        // This method name seems incorrect - it should return transactions, not subscriptions
+        // For now, returning empty list as placeholder
+        return List.of();
+    }
+
+    @Override
+    public Page<Subscription> getTransactionsByUserId(Long userId, Pageable pageable) {
+        // This method name seems incorrect - it should return transactions, not subscriptions
+        // For now, returning user's subscriptions
+        List<Subscription> userSubscriptions = subscriptionRepository.findAllByUserId(userId);
+        
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), userSubscriptions.size());
+        
+        List<Subscription> pageContent = userSubscriptions.subList(start, end);
+        return new PageImpl<>(pageContent, pageable, userSubscriptions.size());
     }
 
 

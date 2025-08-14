@@ -21,4 +21,10 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
     }
     
     Optional<Subscription> findByExternalSubscriptionId(String externalSubscriptionId);
+    
+    // Additional methods for admin functionality
+    List<Subscription> findAllByUserId(Long userId);
+    
+    // Count methods for statistics
+    long countByStatus(Subscription.SubscriptionStatus status);
 }

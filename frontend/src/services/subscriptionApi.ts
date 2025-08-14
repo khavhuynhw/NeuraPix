@@ -68,6 +68,12 @@ export interface SubscriptionResponse<T = any> {
   data: T;
   message?: string;
   error?: string;
+  pagination?: {
+    totalElements: number;
+    totalPages: number;
+    currentPage: number;
+    pageSize: number;
+  };
 }
 
 class SubscriptionApiService {
@@ -320,6 +326,114 @@ class SubscriptionApiService {
         throw new Error(error.response.data.message);
       }
       throw new Error("Failed to upgrade subscription");
+    }
+  }
+
+  // Additional methods for admin functionality
+  async getActivePlans(): Promise<SubscriptionPlan[]> {
+    return this.getSubscriptionPlans();
+  }
+
+  // Admin API methods for subscription management
+  async getSubscriptions(filters: any = {}): Promise<SubscriptionResponse<Subscription[]>> {
+    try {
+      const params = new URLSearchParams();
+      if (filters.status) params.append('status', filters.status);
+      if (filters.tier) params.append('tier', filters.tier);
+      if (filters.billingCycle) params.append('billingCycle', filters.billingCycle);
+      if (filters.autoRenew !== undefined) params.append('autoRenew', filters.autoRenew.toString());
+      if (filters.page !== undefined) params.append('page', filters.page.toString());
+      if (filters.size !== undefined) params.append('size', filters.size.toString());
+
+      const response = await axios.get(`${SUBSCRIPTION_BASE_URL}/search?${params.toString()}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Get subscriptions error:', error);
+      throw new Error(error.response?.data?.message || "Failed to get subscriptions");
+    }
+  }
+
+  async getSubscriptionStats(): Promise<SubscriptionResponse> {
+    try {
+      const response = await axios.get(`${SUBSCRIPTION_BASE_URL}/stats`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Get subscription stats error:', error);
+      throw new Error(error.response?.data?.message || "Failed to get subscription statistics");
+    }
+  }
+
+  // Admin API methods for plan management
+  async getAllPlans(filters: any = {}): Promise<SubscriptionResponse<SubscriptionPlan[]>> {
+    try {
+      const params = new URLSearchParams();
+      if (filters.tier) params.append('tier', filters.tier);
+      if (filters.isActive !== undefined) params.append('isActive', filters.isActive.toString());
+      if (filters.priceRange) {
+        if (filters.priceRange[0] !== undefined) params.append('minPrice', filters.priceRange[0].toString());
+        if (filters.priceRange[1] !== undefined) params.append('maxPrice', filters.priceRange[1].toString());
+      }
+      if (filters.page !== undefined) params.append('page', filters.page.toString());
+      if (filters.size !== undefined) params.append('size', filters.size.toString());
+
+      const response = await axios.get(`${PLANS_BASE_URL}/search?${params.toString()}`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Get all plans error:', error);
+      throw new Error(error.response?.data?.message || "Failed to get plans");
+    }
+  }
+
+  async getPlanStats(): Promise<SubscriptionResponse> {
+    try {
+      const response = await axios.get(`${PLANS_BASE_URL}/stats`, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Get plan stats error:', error);
+      throw new Error(error.response?.data?.message || "Failed to get plan statistics");
+    }
+  }
+
+  async createPlan(planData: any): Promise<SubscriptionPlan> {
+    try {
+      const response = await axios.post(`${PLANS_BASE_URL}`, planData, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Create plan error:', error);
+      throw new Error(error.response?.data?.message || "Failed to create plan");
+    }
+  }
+
+  async updatePlan(planId: number, planData: any): Promise<SubscriptionPlan> {
+    try {
+      const response = await axios.put(`${PLANS_BASE_URL}/${planId}`, planData, {
+        headers: this.getAuthHeaders(),
+      });
+      return response.data;
+    } catch (error: any) {
+      console.error('Update plan error:', error);
+      throw new Error(error.response?.data?.message || "Failed to update plan");
+    }
+  }
+
+  async deletePlan(planId: number): Promise<void> {
+    try {
+      await axios.delete(`${PLANS_BASE_URL}/${planId}`, {
+        headers: this.getAuthHeaders(),
+      });
+    } catch (error: any) {
+      console.error('Delete plan error:', error);
+      throw new Error(error.response?.data?.message || "Failed to delete plan");
     }
   }
 }
