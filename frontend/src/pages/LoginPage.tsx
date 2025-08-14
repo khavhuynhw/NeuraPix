@@ -29,7 +29,7 @@ export const LoginPage = () => {
       form.setFields([
         {
           name: "email",
-          errors: [error.message || "Invalid email or password"],
+          errors: ["Invalid email or password"],
         },
       ]);
     }
