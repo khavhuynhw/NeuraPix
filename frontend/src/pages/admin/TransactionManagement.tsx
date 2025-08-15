@@ -38,6 +38,8 @@ const TransactionManagement: React.FC = () => {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [filters, setFilters] = useState<FilterValues>({});
+  const [searchValue, setSearchValue] = useState("");
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
 
   // Fetch transaction statistics
   const fetchStats = async () => {
@@ -71,6 +73,7 @@ const TransactionManagement: React.FC = () => {
         endDate: searchFilters.dateRange?.[1]?.format('YYYY-MM-DD'),
       });
       setTransactions(response.data || []);
+      setFilteredTransactions(response.data || []);
     } catch (error) {
       console.warn("Backend not available, using demo data:", error);
       // Use fallback data for demo when backend is not available
@@ -152,10 +155,45 @@ const TransactionManagement: React.FC = () => {
         },
       ];
       setTransactions(mockTransactions);
+      setFilteredTransactions(mockTransactions);
     } finally {
       setLoading(false);
     }
   };
+
+  // Search functionality
+  const handleSearch = (value: string) => {
+    setSearchValue(value);
+    if (!value.trim()) {
+      setFilteredTransactions(transactions);
+      return;
+    }
+
+    const filtered = transactions.filter(transaction => 
+      transaction.orderCode.toString().includes(value.toLowerCase()) ||
+      transaction.buyerEmail.toLowerCase().includes(value.toLowerCase()) ||
+      (transaction.description && transaction.description.toLowerCase().includes(value.toLowerCase())) ||
+      transaction.status.toLowerCase().includes(value.toLowerCase()) ||
+      transaction.type.toLowerCase().includes(value.toLowerCase())
+    );
+    setFilteredTransactions(filtered);
+  };
+
+  // Apply search when transactions change
+  useEffect(() => {
+    if (!searchValue.trim()) {
+      setFilteredTransactions(transactions);
+    } else {
+      const filtered = transactions.filter(transaction => 
+        transaction.orderCode.toString().includes(searchValue.toLowerCase()) ||
+        transaction.buyerEmail.toLowerCase().includes(searchValue.toLowerCase()) ||
+        (transaction.description && transaction.description.toLowerCase().includes(searchValue.toLowerCase())) ||
+        transaction.status.toLowerCase().includes(searchValue.toLowerCase()) ||
+        transaction.type.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredTransactions(filtered);
+    }
+  }, [transactions, searchValue]);
 
   // Initial data load
   useEffect(() => {
@@ -278,7 +316,7 @@ const TransactionManagement: React.FC = () => {
   };
 
   const handleExportTransactions = () => {
-    transactionApi.exportTransactionsToCSV(transactions, 'transactions.csv');
+    transactionApi.exportTransactionsToCSV(filteredTransactions, 'transactions.csv');
     message.success('Transactions exported successfully');
   };
 
@@ -289,7 +327,7 @@ const TransactionManagement: React.FC = () => {
       label: 'Export Selected',
       icon: <DownloadOutlined />,
       onClick: (selectedKeys) => {
-        const selectedTransactions = transactions.filter(t => 
+        const selectedTransactions = filteredTransactions.filter(t => 
           selectedKeys.includes(t.id.toString())
         );
         transactionApi.exportTransactionsToCSV(selectedTransactions, 'selected-transactions.csv');
@@ -428,9 +466,11 @@ const TransactionManagement: React.FC = () => {
       {/* Transactions Table */}
       <DataTable
         title="Transactions"
-        data={transactions}
+        data={filteredTransactions}
         columns={columns}
         loading={loading}
+        onSearch={handleSearch}
+        searchPlaceholder="Search by order code, email, description, status, or type..."
         onRefresh={() => fetchTransactions(filters)}
         onExport={handleExportTransactions}
         bulkActions={bulkActions}
