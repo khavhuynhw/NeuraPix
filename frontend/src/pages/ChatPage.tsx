@@ -328,7 +328,7 @@ export const ChatPage = () => {
       
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `❌ Failed to generate image: ${error.message || 'Unknown error'}`,
+        content: `❌ Failed to generate image:  'contains some inappropriate content try again with approriate prompt'`,
         sender: "assistant",
         timestamp: new Date(),
         messageType: "ERROR",
