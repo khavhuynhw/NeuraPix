@@ -12,4 +12,5 @@ public interface CloudinaryService {
     CompletableFuture<String> uploadImageFromUrl(String imageUrl, String folder);
     CompletableFuture<Boolean> deleteImage(String publicId);
     CompletableFuture<String> generateTransformationUrl(String publicId, int width, int height, String format);
+    String uploadImageFromBytes(byte[] imageBytes, String filename);
 }

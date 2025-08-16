@@ -216,6 +216,33 @@ public class CloudinaryServiceImpl implements CloudinaryService {
         });
     }
 
+    @Override
+    public String uploadImageFromBytes(byte[] imageBytes, String filename) {
+        try {
+            validateCloudinaryConfig();
+            
+            Map<String, Object> uploadParams = ObjectUtils.asMap(
+                "folder", defaultFolder,
+                "public_id", filename,
+                "resource_type", "image",
+                "overwrite", true,
+                "quality", "auto",
+                "format", "png"
+            );
+            
+            @SuppressWarnings("unchecked")
+            Map<String, Object> uploadResult = (Map<String, Object>) cloudinary.uploader().upload(imageBytes, uploadParams);
+            String cloudinaryUrl = (String) uploadResult.get("secure_url");
+            
+            logger.info("Successfully uploaded image from bytes to Cloudinary: {}", cloudinaryUrl);
+            return cloudinaryUrl;
+            
+        } catch (Exception e) {
+            logger.error("Error uploading image from bytes to Cloudinary: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to upload image from bytes to Cloudinary: " + e.getMessage());
+        }
+    }
+
     private void validateCloudinaryConfig() {
         if (cloudinary == null) {
             throw new RuntimeException("Cloudinary not initialized. Please check your configuration.");
