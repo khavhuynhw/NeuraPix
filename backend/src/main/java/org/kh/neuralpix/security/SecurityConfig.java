@@ -61,6 +61,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v2/payments/payos/return/**").permitAll()
                         .requestMatchers("/api/v2/payments/payos/cancel/**").permitAll()
                         
+                        // Image processing endpoints (require authentication)
+                        .requestMatchers("/api/pixelcut/**").permitAll()
+                        .requestMatchers("/api/vertexai/**").permitAll()
+                        
                         // Health check endpoint
                         .requestMatchers("/actuator/health").permitAll()
                         

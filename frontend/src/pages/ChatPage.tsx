@@ -33,12 +33,11 @@ import {
   ExpandOutlined,
   DownloadOutlined,
 } from "@ant-design/icons";
-import { geminiApi, imageUtils } from "../services/geminiApi";
-import type { GeminiChatRequest, GeminiChatResponse } from "../services/geminiApi";
 import { pixelcutApi, pixelcutUtils } from "../services/pixelcutApi";
 import type { PixelCutResponse } from "../services/pixelcutApi";
 import { generatedImageApi, imageApiUtils } from "../services/generatedImageApi";
 import type { GeneratedImageResponse } from "../services/generatedImageApi";
+import { vertexaiApi, type VertexAIImageRequest, type VertexAIImageResponse } from "../services/vertexaiApi";
 
 const { Sider } = Layout;
 const { Text } = Typography;
@@ -50,7 +49,13 @@ interface Message {
   sender: "user" | "assistant";
   timestamp: Date;
   images?: string[]; // URLs of generated/uploaded images
-  messageType?: "TEXT" | "IMAGE" | "ERROR";
+  messageType?: "TEXT" | "IMAGE" | "ERROR" | "VERTEX_AI";
+  vertexAIData?: {
+    prompt: string;
+    aspectRatio?: string;
+    processingTime?: number;
+    model?: string;
+  };
 }
 
 interface Conversation {
@@ -77,7 +82,6 @@ export const ChatPage = () => {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // PixelCut states
@@ -275,6 +279,92 @@ export const ChatPage = () => {
     }
   };
 
+  // Vertex AI image generation function
+  const handleVertexAIGeneration = async (prompt: string, options?: {
+    aspectRatio?: string;
+    numberOfImages?: number;
+    negativePrompt?: string;
+  }): Promise<void> => {
+    setIsGenerating(true);
+    
+    try {
+      const request: VertexAIImageRequest = {
+        prompt: prompt.replace(/^\/imagen\s+/i, '').trim(),
+        aspectRatio: options?.aspectRatio || '1:1',
+        numberOfImages: options?.numberOfImages || 1,
+        negativePrompt: options?.negativePrompt,
+        safetyFilterLevel: 'block_some',
+        addWatermark: false,
+      };
+
+      const response: VertexAIImageResponse = await vertexaiApi.generateImage(request);
+
+      if (response.success && response.images && response.images.length > 0) {
+        const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: `🎨 Generated ${response.images.length} image(s) with Vertex AI Imagen`,
+          sender: "assistant",
+          timestamp: new Date(),
+          images: response.images.map(img => img.imageUrl).filter(Boolean),
+          messageType: "VERTEX_AI",
+          vertexAIData: {
+            prompt: request.prompt,
+            aspectRatio: request.aspectRatio,
+            processingTime: response.processingTimeMs,
+            model: 'Vertex AI Imagen',
+          },
+        };
+
+        updateCurrentConversation(assistantMessage);
+        message.success(`Generated ${response.images.length} image(s) in ${response.processingTimeMs}ms`);
+        
+        // Refresh user's generated images
+        fetchUserGeneratedImages();
+      } else {
+        throw new Error(response.errorMessage || 'Failed to generate image');
+      }
+    } catch (error: any) {
+      console.error('Vertex AI generation error:', error);
+      
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `❌ Failed to generate image: ${error.message || 'Unknown error'}`,
+        sender: "assistant",
+        timestamp: new Date(),
+        messageType: "ERROR",
+      };
+
+      updateCurrentConversation(errorMessage);
+      message.error('Failed to generate image with Vertex AI');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+
+  // Parse chat commands (simplified - mostly for backward compatibility)
+  const parseImageCommand = (input: string): {
+    isCommand: boolean;
+    command?: 'imagen';
+    prompt?: string;
+    options?: any;
+  } => {
+    const trimmedInput = input.trim();
+    
+    // Support legacy /imagen command for backward compatibility
+    if (trimmedInput.toLowerCase().startsWith('/imagen ')) {
+      return {
+        isCommand: true,
+        command: 'imagen',
+        prompt: trimmedInput.slice(8).trim(),
+        options: {}
+      };
+    }
+
+    return { isCommand: false };
+  };
+
+
   const updateCurrentConversation = (newMessage: Message) => {
     setConversations(conversations.map(conv =>
       conv.id === currentConversationId
@@ -326,6 +416,9 @@ export const ChatPage = () => {
   const sendMessage = async () => {
     if (!inputValue.trim() && uploadedImages.length === 0) return;
 
+    // Check for image generation commands
+    const commandInfo = parseImageCommand(inputValue);
+    
     const userMessage: Message = {
       id: Date.now().toString(),
       content: inputValue || "📷 Uploaded image(s)",
@@ -347,166 +440,76 @@ export const ChatPage = () => {
 
     const messageText = inputValue;
     setInputValue("");
-    setIsGenerating(true);
+    setUploadedImages([]);
 
-    try {
-      // Clear any previous connection errors
-      setConnectionError(null);
-      setIsConnected(true);
-
-      // Prepare request for Gemini API
-      const request: GeminiChatRequest = {
-        message: messageText || "Please analyze this image.",
-        conversationId: currentConversationId,
-        images: uploadedImages.length > 0 ? uploadedImages : undefined,
-      };
-
-      let response: GeminiChatResponse;
-
-      // Choose appropriate API endpoint based on content
-      if (uploadedImages.length > 0 && messageText) {
-        // Both text and images - use multimodal
-        response = await geminiApi.processMultiModal(request);
-      } else if (uploadedImages.length > 0) {
-        // Only images - analyze them
-        response = await geminiApi.analyzeImage(request);
-      } else if (messageText.toLowerCase().includes('generate') || 
-                 messageText.toLowerCase().includes('create') || 
-                 messageText.toLowerCase().includes('draw')) {
-        // Text requesting image generation - use hybrid approach
-        response = await geminiApi.generateImage(request);
-      } else {
-        // Regular text chat
-        response = await geminiApi.sendMessage(request);
-      }
-
-      // Reset retry count on success
-      setRetryCount(0);
-
-      // Add assistant response
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.content,
-        sender: "assistant",
-        timestamp: new Date(),
-        images: response.generatedImages || undefined,
-        messageType: response.messageType as "TEXT" | "IMAGE" | "ERROR",
-      };
-
-      setConversations(prev => prev.map(conv => 
-        conv.id === currentConversationId 
-          ? { 
-              ...conv, 
-              messages: [...conv.messages, assistantMessage],
-              lastMessage: response.content.slice(0, 40) + "...",
-              timestamp: new Date()
-            }
-          : conv
-      ));
-
-      // Clear uploaded images after sending
-      setUploadedImages([]);
-
-      // Handle different response types
-      if (response.messageType === 'IMAGE') {
-        message.success('🎨 Image generated successfully!');
-        
-        // Save generated images to backend database
-        if (response.generatedImages && response.generatedImages.length > 0) {
-          try {
-            await Promise.all(response.generatedImages.map(async (imageUrl) => {
-              await generatedImageApi.createImage({
-                imageUrl: imageUrl,
-                status: 'completed',
-                isPublic: false,
-              });
-            }));
-            // Successfully saved generated images to database
-          } catch (error) {
-            console.error('Failed to save generated images to database:', error);
-            // Don't show error to user - this is background operation
-          }
-        }
-        
-        // Refresh user's generated images after new image generation
-        fetchUserGeneratedImages();
-      } else if (response.messageType === 'ENHANCED_PROMPT') {
-        message.success('Enhanced prompt generated!');
-      } else if (response.messageType === 'TEXT') {
-        // Subtle success indicator for regular messages
-        setIsConnected(true);
-      }
-
-    } catch (error: any) {
-      console.error('Error sending message:', error);
-      
-      // Handle different types of errors
-      let errorText = 'Something went wrong. Please try again.';
-      let shouldShowRetry = true;
-
-      if (error.message?.includes('Network Error') || error.code === 'NETWORK_ERROR') {
-        errorText = 'Network connection error. Please check your internet connection and try again.';
-        setIsConnected(false);
-        setConnectionError('Network connection failed');
-      } else if (error.response?.status === 401) {
-        errorText = 'Authentication failed. Please log in again.';
-        shouldShowRetry = false;
-      } else if (error.response?.status === 429) {
-        errorText = 'Too many requests. Please wait a moment before trying again.';
-        setConnectionError('Rate limit exceeded');
-      } else if (error.response?.status === 500) {
-        errorText = 'Server error. Our team has been notified. Please try again later.';
-        setConnectionError('Server error');
-      } else if (error.message?.includes('timeout')) {
-        errorText = 'Request timed out. Please try again.';
-        setConnectionError('Request timeout');
-      }
-
-      // Increment retry count
-      setRetryCount(prev => prev + 1);
-      
-      // Add error message
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: `❌ ${errorText}${shouldShowRetry && retryCount < 3 ? ' (Retry ' + (retryCount + 1) + '/3)' : ''}`,
-        sender: "assistant",
-        timestamp: new Date(),
-      };
-
-      setConversations(prev => prev.map(conv => 
-        conv.id === currentConversationId 
-          ? { 
-              ...conv, 
-              messages: [...conv.messages, errorMessage],
-              lastMessage: "Error occurred",
-              timestamp: new Date()
-            }
-          : conv
-      ));
-
-      // Show user-friendly error messages
-      if (error.response?.status === 401) {
-        message.error('Please log in again to continue.');
-      } else if (error.response?.status === 429) {
-        message.warning('Please wait a moment before sending another message.');
-      } else {
-        message.error(errorText);
-      }
-
-    } finally {
-      setIsGenerating(false);
+    // Handle /imagen command if still used
+    if (commandInfo.isCommand && commandInfo.command === 'imagen' && commandInfo.prompt) {
+      await handleVertexAIGeneration(commandInfo.prompt, commandInfo.options);
+      return;
     }
+
+    // All text input now directly generates images using Vertex AI
+    if (messageText && messageText.trim()) {
+      await handleVertexAIGeneration(messageText.trim());
+      return;
+    }
+
+    // If no text input, show help message
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: `🎨 **Welcome to AI Image Generation!**\n\nJust type any description and I'll create an image for you:\n\n**Examples:**\n• "a beautiful sunset over mountains"\n• "a cat wearing sunglasses"\n• "abstract art with blue and gold colors"\n• "a futuristic city at night"\n\nNo commands needed - just describe what you want to see!`,
+      sender: "assistant",
+      timestamp: new Date(),
+      messageType: "TEXT"
+    };
+
+    setConversations(prev => prev.map(conv => 
+      conv.id === currentConversationId 
+        ? { 
+            ...conv, 
+            messages: [...conv.messages, assistantMessage],
+            lastMessage: assistantMessage.content.slice(0, 40) + "...",
+            timestamp: new Date()
+          }
+        : conv
+    ));
+
   };
 
   // Removed unused handleDownload function
 
+  // Image utility functions
+  const validateImageFile = (file: File): boolean => {
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+
+    if (!validTypes.includes(file.type)) {
+      throw new Error('Unsupported image format. Please use JPG, PNG, or WebP.');
+    }
+
+    if (file.size > maxSize) {
+      throw new Error('Image size too large. Please use images smaller than 10MB.');
+    }
+
+    return true;
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
   const handleImageUpload = async (file: File) => {
     try {
       // Validate image file
-      imageUtils.validateImageFile(file);
+      validateImageFile(file);
 
       // Convert to base64
-      const base64 = await imageUtils.fileToBase64(file);
+      const base64 = await fileToBase64(file);
       setUploadedImages(prev => [...prev, base64]);
       message.success("Image uploaded successfully!");
     } catch (error: any) {
@@ -949,7 +952,6 @@ export const ChatPage = () => {
                     <Button size="small" onClick={() => {
                       setConnectionError(null);
                       setIsConnected(true);
-                      setRetryCount(0);
                     }}>
                       Retry
                     </Button>
@@ -974,7 +976,36 @@ export const ChatPage = () => {
                       </svg>
                     </div>
                     <h2 className="welcome-title">Start a conversation</h2>
-                    <p className="welcome-description">Send a message to get started with your AI assistant</p>
+                    <p className="welcome-description">Chat with AI and generate images with Vertex AI Imagen</p>
+                    
+                    <div className="feature-cards">
+                      <div className="feature-card">
+                        <div className="feature-icon">💬</div>
+                        <div className="feature-content">
+                          <h3>Chat with AI</h3>
+                          <p>Ask questions, get help, or have a conversation</p>
+                        </div>
+                      </div>
+                      
+                      <div className="feature-card vertex-ai">
+                        <div className="feature-icon">🎨</div>
+                        <div className="feature-content">
+                          <h3>Vertex AI Imagen</h3>
+                          <p>Generate stunning images from text prompts</p>
+                          <div className="command-example">
+                            <code>/imagen a beautiful sunset over mountains</code>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="feature-card">
+                        <div className="feature-icon">🖼️</div>
+                        <div className="feature-content">
+                          <h3>Image Processing</h3>
+                          <p>Upload and process images with PixelCut AI</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1003,12 +1034,41 @@ export const ChatPage = () => {
                       <div className="message-content">
                         <div className="message-bubble">
                           <div className="message-text">{message.content}</div>
-                          {/* Display generated images - PixelCut Style */}
+                          
+                          {/* Display Vertex AI generation info */}
+                          {message.messageType === "VERTEX_AI" && message.vertexAIData && (
+                            <div className="vertex-ai-info">
+                              <div className="ai-badge">
+                                <span className="badge-icon">🎨</span>
+                                <span className="badge-text">Vertex AI Imagen</span>
+                              </div>
+                              <div className="generation-details">
+                                <div className="detail-item">
+                                  <span className="detail-label">Prompt:</span>
+                                  <span className="detail-value">{message.vertexAIData.prompt}</span>
+                                </div>
+                                {message.vertexAIData.aspectRatio && (
+                                  <div className="detail-item">
+                                    <span className="detail-label">Aspect Ratio:</span>
+                                    <span className="detail-value">{message.vertexAIData.aspectRatio}</span>
+                                  </div>
+                                )}
+                                {message.vertexAIData.processingTime && (
+                                  <div className="detail-item">
+                                    <span className="detail-label">Processing Time:</span>
+                                    <span className="detail-value">{message.vertexAIData.processingTime}ms</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Display generated images - Enhanced for Vertex AI */}
                           {message.images && message.images.length > 0 && (
-                            <div className="message-images pixelcut-style">
+                            <div className={`message-images ${message.messageType === 'VERTEX_AI' ? 'vertex-ai-style' : 'pixelcut-style'}`}>
                               <div className={`images-grid ${message.images.length === 1 ? 'single-image' : 'multiple-images'}`}>
                                 {message.images.map((imageUrl, index) => (
-                                  <div key={index} className="pixelcut-image-card">
+                                  <div key={index} className={`image-card ${message.messageType === 'VERTEX_AI' ? 'vertex-ai-card' : 'pixelcut-image-card'}`}>
                                     <div className="image-card-container">
                                       {/* Image Preview */}
                                       <div className="image-preview-wrapper">
@@ -1032,6 +1092,13 @@ export const ChatPage = () => {
                                               className="preview-btn"
                                             />
                                           </div>
+
+                                          {/* Vertex AI Badge */}
+                                          {message.messageType === 'VERTEX_AI' && (
+                                            <div className="ai-model-badge">
+                                              <span>Vertex AI</span>
+                                            </div>
+                                          )}
                                         </div>
                                       </div>
 
@@ -1076,7 +1143,9 @@ export const ChatPage = () => {
                                       <div className="image-metadata">
                                         <div className="metadata-info">
                                           <span className="image-index">#{index + 1}</span>
-                                          <span className="image-status">Ready</span>
+                                          <span className={`image-status ${message.messageType === 'VERTEX_AI' ? 'vertex-ai' : 'ready'}`}>
+                                            {message.messageType === 'VERTEX_AI' ? 'Vertex AI' : 'Ready'}
+                                          </span>
                                         </div>
                                       </div>
                                     </div>
@@ -1250,11 +1319,35 @@ export const ChatPage = () => {
                       value={inputValue}
                       onChange={(e) => setInputValue(e.target.value)}
                       onKeyPress={handleKeyPress}
-                      placeholder="Type your message..."
+                      placeholder="Describe any image you want to create... e.g., 'a cat wearing sunglasses'"
                       className="chat-input"
                       autoSize={{ minRows: 1, maxRows: 6 }}
                       bordered={false}
                     />
+                    
+                    {/* Command Hints */}
+                    {inputValue.length > 0 && (
+                      <div className="command-hints">
+                        <div className="hint-item">
+                          <span className="command-text">✨ AI Image Generation</span>
+                          <span className="command-desc">Just describe what you want to see - no commands needed!</span>
+                        </div>
+                        <div className="hint-examples">
+                          <div className="hint-example">
+                            <strong>Examples:</strong>
+                          </div>
+                          <div className="hint-example">
+                            <code>a beautiful sunset over mountains</code>
+                          </div>
+                          <div className="hint-example">
+                            <code>a cat wearing sunglasses</code>
+                          </div>
+                          <div className="hint-example">
+                            <code>abstract art with blue and gold</code>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   
                   <div className="input-controls-right">
@@ -1592,6 +1685,27 @@ export const ChatPage = () => {
 
         .generated-images-gallery {
           margin-top: 8px;
+          max-height: 300px;
+          overflow-y: auto;
+          padding-right: 4px;
+        }
+
+        .generated-images-gallery::-webkit-scrollbar {
+          width: 6px;
+        }
+
+        .generated-images-gallery::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 3px;
+        }
+
+        .generated-images-gallery::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+
+        .generated-images-gallery::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
         }
 
         .loading-images {
@@ -1936,6 +2050,37 @@ export const ChatPage = () => {
           border: 1px solid #e2e8f0;
         }
 
+        .message-images.vertex-ai-style {
+          margin-top: 16px;
+          background: linear-gradient(135deg, #4285f4, #34a853, #fbbc04, #ea4335);
+          background-size: 400% 400%;
+          animation: vertexAIGradient 15s ease infinite;
+          border-radius: 16px;
+          padding: 2px;
+          position: relative;
+        }
+
+        .message-images.vertex-ai-style::before {
+          content: '';
+          position: absolute;
+          inset: 2px;
+          background: #ffffff;
+          border-radius: 14px;
+          z-index: 0;
+        }
+
+        .message-images.vertex-ai-style .images-grid {
+          position: relative;
+          z-index: 1;
+          background: transparent;
+        }
+
+        @keyframes vertexAIGradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+
         .images-grid {
           display: grid;
           gap: 16px;
@@ -1965,6 +2110,21 @@ export const ChatPage = () => {
           transform: translateY(-4px);
           box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
           border-color: #3b82f6;
+        }
+
+        .vertex-ai-card {
+          background: white;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+          transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+          border: 2px solid transparent;
+          background-clip: padding-box;
+        }
+
+        .vertex-ai-card:hover {
+          transform: translateY(-6px);
+          box-shadow: 0 12px 32px rgba(66, 133, 244, 0.25);
         }
 
         .image-card-container {
@@ -2157,6 +2317,136 @@ export const ChatPage = () => {
           font-weight: 500;
         }
 
+        .image-status.vertex-ai {
+          background: rgba(66, 133, 244, 0.1);
+          color: #4285f4;
+        }
+
+        .ai-model-badge {
+          position: absolute;
+          top: 8px;
+          left: 8px;
+          background: linear-gradient(135deg, #4285f4, #34a853);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-size: 10px;
+          font-weight: 600;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+        }
+
+        .vertex-ai-info {
+          margin-top: 12px;
+          background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+          border: 1px solid #e0e7ff;
+          border-radius: 12px;
+          padding: 12px;
+        }
+
+        .ai-badge {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .badge-icon {
+          font-size: 16px;
+        }
+
+        .badge-text {
+          font-weight: 600;
+          color: #4285f4;
+          font-size: 14px;
+        }
+
+        .generation-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .detail-item {
+          display: flex;
+          gap: 8px;
+          font-size: 13px;
+        }
+
+        .detail-label {
+          font-weight: 500;
+          color: #6b7280;
+          min-width: 80px;
+        }
+
+        .detail-value {
+          color: #374151;
+          flex: 1;
+        }
+
+        .command-hints {
+          position: absolute;
+          bottom: 100%;
+          left: 0;
+          right: 0;
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 12px;
+          margin-bottom: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+          z-index: 1000;
+        }
+
+        .hint-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          margin-bottom: 8px;
+        }
+
+        .command-text {
+          background: linear-gradient(135deg, #4285f4, #34a853);
+          color: white;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+          font-size: 12px;
+          font-weight: 600;
+        }
+
+        .command-desc {
+          color: #6b7280;
+          font-size: 14px;
+        }
+
+        .hint-example {
+          color: #9ca3af;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+
+        .hint-example code {
+          background: #f3f4f6;
+          padding: 2px 4px;
+          border-radius: 4px;
+          font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+        }
+
+        .hint-examples {
+          margin-top: 8px;
+          padding-top: 8px;
+          border-top: 1px solid #e2e8f0;
+        }
+
+        .hint-examples .hint-example:first-child {
+          margin-top: 0;
+          margin-bottom: 4px;
+          font-weight: 600;
+          color: #374151;
+        }
+
         .collection-actions {
           margin-top: 12px;
           padding-top: 12px;
@@ -2262,7 +2552,71 @@ export const ChatPage = () => {
         .welcome-description {
           font-size: 16px;
           color: #6b7280;
-          margin: 0;
+          margin: 0 0 24px 0;
+        }
+
+        .feature-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+          gap: 16px;
+          margin-top: 24px;
+          max-width: 600px;
+          width: 100%;
+        }
+
+        .feature-card {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          padding: 16px;
+          text-align: left;
+          transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature-card.vertex-ai {
+          background: linear-gradient(135deg, #f8f9ff, #f0f4ff);
+          border-color: #e0e7ff;
+        }
+
+        .feature-card.vertex-ai:hover {
+          box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+        }
+
+        .feature-icon {
+          font-size: 24px;
+          margin-bottom: 8px;
+        }
+
+        .feature-content h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1f2937;
+          margin: 0 0 4px 0;
+        }
+
+        .feature-content p {
+          font-size: 14px;
+          color: #6b7280;
+          margin: 0 0 8px 0;
+        }
+
+        .command-example {
+          margin-top: 8px;
+        }
+
+        .command-example code {
+          background: rgba(66, 133, 244, 0.1);
+          color: #4285f4;
+          padding: 4px 8px;
+          border-radius: 6px;
+          font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+          font-size: 12px;
+          font-weight: 500;
         }
 
         .chat-messages {
